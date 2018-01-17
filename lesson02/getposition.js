@@ -41,6 +41,9 @@ viewer.camera.flyToBoundingSphere(boundingSphere, { duration: 0 });
 var x = 360.0;
 var y = -920.0;
 var z = -820.0;
+// var x = 0;
+// var y = 0;
+// var z = 0;
 var m = Cesium.Matrix4.fromArray([
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
@@ -52,7 +55,7 @@ var tileset = viewer.scene.primitives.add(new Cesium.Cesium3DTileset({
     url: 'Scene/testm3DTiles.json',
     maximumScreenSpaceError: 2,
     maximumNumberOfLoadedTiles: 1000,
-    modelMatrix: m
+    modelMatrix: m  //方法一，动态修改modelMatrix
 }));
 
 var boundingSphere = null; // = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(111.5652101, 38.70350851, 100.500143), 143.6271004);
@@ -61,6 +64,8 @@ function zoomToTileset() {
     boundingSphere = tileset.boundingSphere;
     viewer.camera.viewBoundingSphere(boundingSphere, new Cesium.HeadingPitchRange(0, -2.0, 0));
     viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+    //changeHeight(0);
 }
 
 tileset.readyPromise.then(zoomToTileset);
@@ -92,18 +97,38 @@ function change(type) {
             z -= step;
             break;
     }
-    m = Cesium.Matrix4.fromArray([
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        x, y, z, 1.0
-    ]);
+
+    //创建平移矩阵方法一
+    // m = Cesium.Matrix4.fromArray([
+    //     1.0, 0.0, 0.0, 0.0,
+    //     0.0, 1.0, 0.0, 0.0,
+    //     0.0, 0.0, 1.0, 0.0,
+    //     x, y, z, 1.0
+    // ]);
+
+    //创建平移矩阵方法二
+    var translation=Cesium.Cartesian3.fromArray([x, y, z]);
+    m= Cesium.Matrix4.fromTranslation(translation);
+
     document.getElementById("result").innerText = "x:" + x + " y:" + y + " z:" + z;
 
-    tileset._modelMatrix = m;
-    tileset.update();
+    tileset.modelMatrix = m;
 }
 
 function changevisible() {
     tileset.show = !tileset.show;
+}
+
+//方法二，直接调用函数，调整高度,height表示物体离地面的高度
+function changeHeight(height) {
+    height = Number(height);
+    if (isNaN(height)) {
+        return;
+    }
+    
+    var cartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
+    var surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.height);
+    var offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude,height);
+    var translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
+    tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
 }
