@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <meta name="description" content="Use Viewer to start building new applications or easily embed Cesium into existing applications.">
+    <meta name="cesium-sandcastle-labels" content="Beginner, Showcases">
+    <title>Cesium Demo</title>
+    <script type="text/javascript" src="../Sandcastle-header.js"></script>
+    <script type="text/javascript" src="../../../ThirdParty/requirejs-2.1.20/require.js"></script>
+    <script type="text/javascript">
+        if(typeof require === "function") {
+            require.config({
+                baseUrl : '../../../Source',
+                waitSeconds : 120
+            });
+        }
+    </script>
+</head>
+<body class="sandcastle-loading" data-sandcastle-bucket="bucket-requirejs.html">
+<style>
+    @import url(../templates/bucket.css);
+</style>
+<div id="cesiumContainer" class="fullSize"></div>
+<div id="loadingOverlay"><h1>Loading...</h1></div>
+<div id="toolbar"></div>
+<script id="cesium_sandcastle_script">
+function startup(Cesium) {
+    'use strict';
+//Sandcastle_Begin
+/*
+源码来源：http://blog.csdn.net/u013929284/article/details/52653084
+作者：Super洛伽
+*/
+
+var viewer = new Cesium.Viewer('cesiumContainer');
+viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
+    url : 'https://assets.agi.com/stk-terrain/world'
+});
+
+
+var ellipsoid = viewer.scene.globe.ellipsoid;
+var positions = Cesium.Cartesian3.fromDegreesArray([
+    -115, 35,
+    -114, 36
+]);
+
+
+var flatPositions = Cesium.PolylinePipeline.generateArc({
+    positions: positions,
+    granularity: 0.000001
+});
+
+
+var cartographicArray = [];
+for (var i = 0; i < flatPositions.length; i+=3) {
+    var cartesian = Cesium.Cartesian3.unpack(flatPositions, i);
+    cartographicArray.push(ellipsoid.cartesianToCartographic(cartesian));
+}
+
+
+Cesium.sampleTerrain(viewer.terrainProvider, 15, cartographicArray)
+.then(function(raisedPositionsCartograhpic) {
+    var raisedPositions = ellipsoid.cartographicArrayToCartesianArray(raisedPositionsCartograhpic);
+    //console.log(raisedPositions)
+    viewer.entities.add({
+        polyline : {
+            positions : raisedPositions,
+            width : 5,
+            material : Cesium.Color.RED
+        }
+    });
+    viewer.zoomTo(viewer.entities);
+});
+//Sandcastle_End
+    Sandcastle.finishedLoading();
+}
+if (typeof Cesium !== "undefined") {
+    startup(Cesium);
+} else if (typeof require === "function") {
+    require(["Cesium"], startup);
+}
+</script>
+</body>
+</html>
