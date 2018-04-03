@@ -54,8 +54,50 @@
         viewer.terrainProvider = cesiumTerrainProviderMeshes;
         //camera position {x: -2277788.735618622, y: 5411552.618440122, z: 2483810.1472630273}
 
+        //普通线
+        // var yellowLine = viewer.entities.add({
+        //     name: 'Red line on the surface',
+        //     corridor: {
+        //         positions: Cesium.Cartesian3.fromDegreesArray([
+        //             112.82436,
+        //             23.071506,
+        //             112.82742,
+        //             23.067512,
+        //             112.828878,
+        //             23.064659,
+        //             112.830799,
+        //             23.060947,
+        //             112.832166,
+        //             24.058329
+        //         ]),
+        //         width: 2,
+        //         material: Cesium.Color.YELLOW
+        //     }
+        // });
 
-        //线
+        //第一种
+        // var redCorridor = viewer.entities.add({
+        //     name: 'Red corridor on surface with rounded corners',
+        //     corridor: {
+        //         positions: Cesium.Cartesian3.fromDegreesArray([
+        //             112.82436,
+        //             23.071506,
+        //             112.82742,
+        //             23.067512,
+        //             112.828878,
+        //             23.064659,
+        //             112.830799,
+        //             23.060947,
+        //             112.832166,
+        //             23.058329
+        //         ]),
+        //         width: 20.0,
+        //         material: Cesium.Color.YELLOW
+        //     }
+        // });
+
+
+        //第二种 线
         // viewer.dataSources.add(Cesium.GeoJsonDataSource.load('http://localhost:1234/lesson07/pwt1/line.json', {
         //     clampToGround: true
         // }));
