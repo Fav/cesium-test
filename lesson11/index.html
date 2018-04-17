@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.本地图片
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: 'worldimage.jpg',
+                shouldAnimate: true
+            })
+        });
+
+        var czml = [{
+            "id": "document",
+            "name": "polygon",
+            "version": "1.0",
+            "clock": {
+                "interval": "2012-08-04T16:00:00Z/2012-08-04T18:00:00Z",
+                "currentTime": "2012-08-04T16:00:00Z",
+                "multiplier": 10
+            }
+        }, {
+            "id": "shape2",
+            "name": "Red box with black outline",
+            "availability": "2012-08-04T16:00:00Z/2012-08-04T18:00:00Z",
+            /*"position" : {
+            	"cartographicDegrees" : [-66.62557, 516.92809, 100.0]
+            },*/
+            "box": {
+                "dimensions": {
+                    "cartesian": [30.0, 30.0]
+                },
+                "material": {
+                    "stripe": {
+                        "orientation": "VERTICAL",
+                        "evenColor": {
+                            "rgba": [10, 211, 250, 0]
+                        },
+                        "oddColor": {
+                            "rgba": [10, 211, 250, 255]
+                        },
+                        "offset": {
+                            "number": 1
+                        },
+                        "repeat": 0.5
+                    }
+                },
+            },
+            "path": {
+                "material": {
+                    "solidColor": {
+                        "color": {
+                            "interval": "2012-08-04T16:00:00Z/2012-08-04T18:00:00Z",
+                            "rgba": [255, 255, 255, 128]
+                        }
+                    }
+                },
+                "width": [{
+                    "interval": "2012-08-04T16:00:00Z/2012-08-04T18:00:00Z",
+                    "number": 3.0
+                }],
+                "show": [{
+                    "interval": "2012-08-04T16:00:00Z/2012-08-04T18:00:00Z",
+                    "boolean": true
+                }]
+            },
+            "position": {
+                "interpolationAlgorithm": "LAGRANGE",
+                "interpolationDegree": 1,
+                "epoch": "2012-08-04T16:00:00Z",
+                "cartographicDegrees": [
+                    0.0, 118.87841653400005, 30.95679870500004, 0.0,
+                    10.0, 118.87826541800007, 30.95680770900003, 0.0,
+                    20.0, 118.8774481050001, 30.956860625000047, 0.0,
+                    30.0, 118.87660414600009, 30.956910105000077, 0.0,
+                    40.0, 118.8759846580001, 30.95694296000005, 0.0,
+                    50.0, 118.87542502500003, 30.956978761000073, 0.0,
+                    60.0, 118.87473380100005, 30.957024103000037, 0.0,
+                    70.0, 118.87331075600002, 30.957105822000074, 0.0,
+                    80.0, 118.872683101, 30.957145938000053, 0.0,
+                    90.0, 118.87148000400009, 30.957206316000054, 0.0,
+                    100.0, 118.8703352120001, 30.957275382000034, 0.0,
+                    110.0, 118.86885797100001, 30.957332547000078, 0.0,
+                    120.0, 118.86738326300008, 30.95737772800004, 0.0,
+                    130.0, 118.86642269600009, 30.957386024000073, 0.0,
+                    140.0, 118.86574184200003, 30.957391899000072, 0.0,
+                    150.0, 118.8637733700001, 30.957386908000046, 0.0,
+                    160.0, 118.86215555900003, 30.95733388800005, 0.0,
+                    170.0, 118.86056538000003, 30.957278065000025, 0.0,
+                    180.0, 118.8591821770001, 30.957188226000028, 0.0,
+                    190.0, 118.85776318, 30.95710843100005, 0.0,
+                    200.0, 118.8564293390001, 30.95699399500006, 0.0,
+                    210.0, 118.85441515700006, 30.95677240400005, 0.0,
+                    220.0, 118.85311642700003, 30.95661209800005, 0.0,
+                    230.0, 118.85182595600008, 30.956449275000068, 0.0,
+                    240.0, 118.85044591200005, 30.95623523300003, 0.0,
+                    250.0, 118.84891024100011, 30.955990000000043, 0.0,
+                    260.0, 118.84771342500005, 30.955801936000057, 0.0,
+                    270.0, 118.84639428600008, 30.955586978000042, 0.0,
+                    280.0, 118.84543346500004, 30.955433694000078, 0.0,
+                    290.0, 118.84393379500011, 30.95518788700008, 0.0,
+                    300.0, 118.84245659400005, 30.954958443000066, 0.0,
+                    310.0, 118.84086832800006, 30.954711478000036, 0.0,
+                    320.0, 118.8389521150001, 30.954397585000038, 0.0,
+                    330.0, 118.83743037900001, 30.95415440100004, 0.0,
+                    340.0, 118.83639167800004, 30.953980684000044, 0.0,
+                    350.0, 118.83409772800007, 30.95360050900007, 0.0,
+                    360.0, 118.83007170600001, 30.952977617000045, 0.0,
+                    370.0, 118.82803069600004, 30.95264862700003, 0.0,
+                    380.0, 118.82585097600008, 30.95230366800007, 0.0,
+                    390.0, 118.82176879300005, 30.951633591000075, 0.0,
+                    400.0, 118.81809668300002, 30.95105305000004, 0.0,
+                    410.0, 118.81366942947139, 30.950340717889084, 0.0
+                ]
+            }
+        }];
+
+        var dataSourcePromise;
+        var i = 30;
+        var a = 410;
+        setInterval(function() {
+            i += 0.001;
+            a += 10;
+            czml[1].position.cartographicDegrees.push(a, 118.813667, i, 0);
+            czml[0].clock.currentTime = viewer.clock.currentTime.toString()
+            dataSourcePromise = Cesium.CzmlDataSource.load(czml);
+            viewer.dataSources.add(dataSourcePromise);
+        }, 10000);
+
+        dataSourcePromise = Cesium.CzmlDataSource.load(czml);
+        viewer.dataSources.add(dataSourcePromise);
+        viewer.zoomTo(dataSourcePromise);
+    </script>
+</body>
+
+</html>
