@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.本地图片
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: 'worldimage.jpg',
+                shouldAnimate: true
+            }),
+            baseLayerPicker: false,
+        });
+
+        //设定了模拟时间的边界
+        var start = Cesium.JulianDate.fromDate(new Date(2015, 2, 25, 16));
+        var stop = Cesium.JulianDate.addSeconds(start, 360, new Cesium.JulianDate());
+
+        //确保查看器处于预期的时间
+        viewer.clock.startTime = start.clone();
+        viewer.clock.stopTime = stop.clone();
+        viewer.clock.currentTime = start.clone();
+        viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP; //循环结束时
+        //时间变化来控制速度
+        viewer.clock.multiplier = 10;
+
+        //给时间线设置边界
+        viewer.timeline.zoomTo(start, stop);
+
+        function computeCirclularFlight(lon, lat) {
+            var property = new Cesium.SampledPositionProperty();
+
+            //i的增量不能太大，不然差值器无法把图形如愿画出来
+            for (var i = 0; i <= 360; i += 30) {
+                var radians = Cesium.Math.toRadians(i);
+                var time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
+
+                //绕赤道飞
+                var position = Cesium.Cartesian3.fromDegrees(lon + i, lat, 9999999);
+
+                //添加sample
+                property.addSample(time, position);
+
+            }
+            return property;
+        }
+
+        var property = new Cesium.SampledPositionProperty();
+        for (var i = 0; i <= 20; i += 1) {
+            var time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
+
+            //绕赤道飞
+            var position = Cesium.Cartesian3.fromDegrees(i, 0, 9999999);
+
+            //添加sample
+            property.addSample(time, position);
+
+        }
+        var x = 20;
+        var satellitePosition = property;
+        setInterval(function() {
+            //计算实体位置属性s
+            x += 1;
+            var time = Cesium.JulianDate.addSeconds(start, x, new Cesium.JulianDate());
+            //添加点
+            property.addSample(time, Cesium.Cartesian3.fromDegrees(x, 0, 9999999));
+            satellitePosition = property;
+            viewer.entities.removeAll();
+
+            //创建实体
+            var entity = viewer.entities.add({
+
+                // 将实体availability设置为与模拟时间相同的时间间隔。
+                availability: new Cesium.TimeIntervalCollection([new Cesium.TimeInterval({
+                    start: start,
+                    stop: stop
+                })]),
+
+                position: satellitePosition,
+
+                //基于位置移动自动计算方向.
+                orientation: new Cesium.VelocityOrientationProperty(satellitePosition),
+
+                //加载飞机模型
+                model: {
+                    uri: 'Cesium_Air.gltf',
+                    minimumPixelSize: 64
+                },
+
+                //路径
+                path: {
+                    resolution: 1,
+                    material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.1,
+                        color: Cesium.Color.PINK
+                    }),
+                    width: 10
+                }
+            });
+
+            // //差值器
+            // entity.position.setInterpolationOptions({
+            //     interpolationDegree: 5,
+            //     interpolationAlgorithm: Cesium.LagrangePolynomialApproximation
+            // });
+            viewer.zoomTo(viewer.entities);
+        }, 1000);
+
+
+        //计算实体位置属性
+        //var satellitePosition = computeCirclularFlight(0, 0);
+    </script>
+</body>
+
+</html>

@@ -31,9 +31,9 @@
         var viewer = new Cesium.Viewer('cesiumContainer', {
             //2.本地图片
             imageryProvider: new Cesium.SingleTileImageryProvider({
-                url: 'worldimage.jpg',
-                shouldAnimate: true
-            })
+                url: 'worldimage.jpg'
+            }),
+            baseLayerPicker: false,
         });
 
         var czml = [{
@@ -102,7 +102,7 @@
                     40.0, 118.8759846580001, 30.95694296000005, 0.0,
                     50.0, 118.87542502500003, 30.956978761000073, 0.0,
                     60.0, 118.87473380100005, 30.957024103000037, 0.0
-                   
+
                 ]
             }
         }];
@@ -115,7 +115,7 @@
             a += 10;
             czml[1].position.cartographicDegrees.push(a, 118.8747338, i, 0);
             czml[0].clock.currentTime = viewer.clock.currentTime.toString();
-			viewer.entities.removeAll();
+            viewer.entities.removeAll();
             viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));
         }, 1000);
 
