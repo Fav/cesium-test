@@ -19,4 +19,5 @@ viewer.zoomTo(viewer.entities);
 ```
 
 g. 刷新可看到效果
+
 ![img](cesium-heatmap.jpg)
