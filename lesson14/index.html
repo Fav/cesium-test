@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <input type="text" id="cx">
+        <input type="text" id="cy">
+        <input type="button" value="go" onclick="goto()">
+    </div>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+
+        var scene = viewer.scene;
+
+        function createPrimitive(ix, iy) {
+            var instance = new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                    rectangle: Cesium.Rectangle.fromDegrees(ix - 20, iy - 20, ix + 20, iy + 20),
+                    vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+                })
+            });
+            //使用抽象的Primitive而不是RectanglePrimitive  
+            var item = new Cesium.Primitive({
+                geometryInstances: instance,
+                //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
+                appearance: new Cesium.EllipsoidSurfaceAppearance({
+                    material: Cesium.Material.fromType('Dot')
+                })
+            });
+            return item;
+        }
+
+        scene.primitives.add(createPrimitive(0, 0));
+
+        function goto() {
+            let strx = document.getElementById('cx').value;
+            let stry = document.getElementById('cy').value;
+            let x = parseFloat(strx);
+            let y = parseFloat(stry);
+
+            scene.primitives.removeAll();
+            scene.primitives.add(createPrimitive(x, y));
+        }
+    </script>
+</body>
+
+</html>
