@@ -70,15 +70,36 @@
         }
 
         scene.primitives.add(createPrimitive(0, 0));
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0)
+        });
+
+        function checkNumber(theObj) {
+            var reg = /^[0-9]+.?[0-9]*$/;
+            if (reg.test(theObj)) {
+                return true;
+            }
+            return false;
+        }
 
         function goto() {
             let strx = document.getElementById('cx').value;
             let stry = document.getElementById('cy').value;
+            if (!checkNumber(strx) || !checkNumber(stry))
+                return;
             let x = parseFloat(strx);
+
+            if (x > 180 || x < -180)
+                return;
             let y = parseFloat(stry);
+            if (y > 90 || y < -90)
+                return;
 
             scene.primitives.removeAll();
             scene.primitives.add(createPrimitive(x, y));
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(x, y, 30000000.0)
+            });
         }
     </script>
 </body>
