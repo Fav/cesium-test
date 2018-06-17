@@ -26,9 +26,11 @@
 
 <body>
     <div>
-        <input type="text" id="cx">
-        <input type="text" id="cy">
+        <input type="text" id="cx" value="0">
+        <input type="text" id="cy" value="30">
         <input type="button" value="go" onclick="goto()">
+        <input type="button" value="go1" onclick="goto1()">
+        <input type="button" value="reset" onclick="reset()">
     </div>
     <div id="credit"></div>
     <div id="cesiumContainer"></div>
@@ -50,16 +52,18 @@
         });
 
         var scene = viewer.scene;
+        var item;
 
         function createPrimitive(ix, iy) {
             var instance = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
-                    rectangle: Cesium.Rectangle.fromDegrees(ix - 20, iy - 20, ix + 20, iy + 20),
+                    // rectangle: Cesium.Rectangle.fromDegrees(ix - 20, iy - 20, ix + 20, iy + 20),
+                    rectangle: Cesium.Rectangle.fromDegrees(ix - 2, iy - 2, ix + 2, iy + 2),
                     vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
-            var item = new Cesium.Primitive({
+            item = new Cesium.Primitive({
                 geometryInstances: instance,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
                 appearance: new Cesium.EllipsoidSurfaceAppearance({
@@ -75,7 +79,7 @@
         });
 
         function checkNumber(theObj) {
-            var reg = /^[0-9]+.?[0-9]*$/;
+            var reg = /^-?[0-9]+.?[0-9]*$/;
             if (reg.test(theObj)) {
                 return true;
             }
@@ -88,20 +92,58 @@
             if (!checkNumber(strx) || !checkNumber(stry))
                 return;
             let x = parseFloat(strx);
-
-            if (x > 180 || x < -180)
-                return;
             let y = parseFloat(stry);
-            if (y > 90 || y < -90)
-                return;
 
+            // if (x > 180 || x < -180)
+            //     return;
+            // if (y > 90 || y < -90)
+            //     return;
+
+
+            item.modelMatrix = Cesium.Matrix4.fromTranslation(Cesium.Cartesian3.fromArray([x, y, 0]));
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(x, y, 30000000.0)
+            });
+            //viewer.render();
+
+            return;
             scene.primitives.removeAll();
             scene.primitives.add(createPrimitive(x, y));
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(x, y, 30000000.0)
             });
         }
+
+        function goto1() {
+            reset();
+            let strx = document.getElementById('cx').value;
+            let stry = document.getElementById('cy').value;
+            if (!checkNumber(strx) || !checkNumber(stry))
+                return;
+            let lon = parseFloat(strx);
+            let lat = parseFloat(stry);
+
+            // let lon = 10;
+            // let lat = 30;
+            let R = 6378137.0;
+            let mx = (Math.cos(Cesium.Math.toRadians(lat)) + Math.cos(Cesium.Math.toRadians(lon)) - 2) * R;
+            let my = R * Math.sin(Cesium.Math.toRadians(lon));
+            let mz = R * Math.sin(Cesium.Math.toRadians(lat));
+            let trans = Cesium.Cartesian3.fromArray([mx, my, mz]);
+            let rotate = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lat));
+            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(lon));
+
+            var mmm = Cesium.Matrix4.IDENTITY;
+            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotate, new Cesium.Cartesian4());
+            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
+            //mmm = Cesium.Matrix4.multiplyByTranslation(mmm, trans, new Cesium.Cartesian4());
+            // mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
+
+            item.modelMatrix = mmm;
+        }
+
+        function reset() {
+            item.modelMatrix = Cesium.Matrix4.IDENTITY;
+        }
     </script>
 </body>
-
-</html>
