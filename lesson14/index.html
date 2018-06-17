@@ -94,19 +94,6 @@
             let x = parseFloat(strx);
             let y = parseFloat(stry);
 
-            // if (x > 180 || x < -180)
-            //     return;
-            // if (y > 90 || y < -90)
-            //     return;
-
-
-            item.modelMatrix = Cesium.Matrix4.fromTranslation(Cesium.Cartesian3.fromArray([x, y, 0]));
-            viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(x, y, 30000000.0)
-            });
-            //viewer.render();
-
-            return;
             scene.primitives.removeAll();
             scene.primitives.add(createPrimitive(x, y));
             viewer.camera.flyTo({
@@ -122,16 +109,19 @@
             if (!checkNumber(strx) || !checkNumber(stry))
                 return;
             let lon = parseFloat(strx);
-            let lat = 0 - parseFloat(stry);
+            let lat = parseFloat(stry);
 
             let rotatez = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lon));
-            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(lat));
+            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(0 - lat));
 
             var mmm = Cesium.Matrix4.IDENTITY;
             mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
             mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
             item.modelMatrix = mmm;
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
+            });
         }
 
         function reset() {
