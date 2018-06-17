@@ -114,6 +114,7 @@
             });
         }
 
+        //移动方块
         function goto1() {
             reset();
             let strx = document.getElementById('cx').value;
@@ -121,23 +122,14 @@
             if (!checkNumber(strx) || !checkNumber(stry))
                 return;
             let lon = parseFloat(strx);
-            let lat = parseFloat(stry);
+            let lat = 0 - parseFloat(stry);
 
-            // let lon = 10;
-            // let lat = 30;
-            let R = 6378137.0;
-            let mx = (Math.cos(Cesium.Math.toRadians(lat)) + Math.cos(Cesium.Math.toRadians(lon)) - 2) * R;
-            let my = R * Math.sin(Cesium.Math.toRadians(lon));
-            let mz = R * Math.sin(Cesium.Math.toRadians(lat));
-            let trans = Cesium.Cartesian3.fromArray([mx, my, mz]);
-            let rotate = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lat));
-            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(lon));
+            let rotatez = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lon));
+            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(lat));
 
             var mmm = Cesium.Matrix4.IDENTITY;
-            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotate, new Cesium.Cartesian4());
+            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
             mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
-            //mmm = Cesium.Matrix4.multiplyByTranslation(mmm, trans, new Cesium.Cartesian4());
-            // mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
             item.modelMatrix = mmm;
         }
