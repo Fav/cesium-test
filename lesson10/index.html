@@ -27,7 +27,7 @@
 <body>
     <div id="credit"></div>
     <div id="cesiumContainer"></div>
-    <video id="trailer" style="display: none;" autoplay loop crossorigin controls>
+    <video id="trailer" style="display: none;" autoplay="" loop crossorigin controls>
             <source src="tt.mp4" type="video/mp4">
         Your browser does not support the <code>video</code> element.
     </video>
@@ -39,13 +39,13 @@
             })
         });
         var videoElement = document.getElementById('trailer');
-        var sphere = viewer.entities.add({
-            id: "a",
+        var rect = viewer.entities.add({
             rectangle: {
                 coordinates: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0),
                 material: videoElement
             }
         });
+        viewer.trackedEntity = rect;
     </script>
 </body>
 

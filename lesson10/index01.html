@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <video id="trailer" style="display: none;" autoplay="" loop crossorigin controls>
+            <source src="tt.mp4" type="video/mp4">
+        Your browser does not support the <code>video</code> element.
+    </video>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.本地图片
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        var videoElement = document.getElementById('trailer');
+
+
+        var scene = viewer.scene;
+        var item;
+
+        function createPrimitive() {
+            let instance = new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                    rectangle: Cesium.Rectangle.fromDegrees(-30, -10, 30, 10) //,
+                        //vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+                })
+            });
+            //使用抽象的Primitive而不是RectanglePrimitive  
+            item = new Cesium.Primitive({
+                geometryInstances: instance,
+                appearance: new Cesium.MaterialAppearance({
+                    // material: videoElement
+                    material: new Cesium.Material({
+                        fabric: {
+                            type: 'Image',
+                            uniforms: {
+                                image: 'tt.mp4'
+                                    //image: '../img/worldimage.jpg'
+                            }
+                        }
+                    })
+                })
+            });
+            return item;
+        }
+        scene.primitives.add(createPrimitive());
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0)
+        });
+        // var rect = viewer.entities.add({
+        //     rectangle: {
+        //         coordinates: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0),
+        //         material: videoElement
+        //     }
+        // });
+        // viewer.trackedEntity = rect;
+    </script>
+</body>
+
+</html>
