@@ -41,7 +41,7 @@
             }),
             //geocoder: false,
             homeButton: false,
-            sceneModePicker: false,
+            //sceneModePicker: false,
             baseLayerPicker: false,
             navigationHelpButton: false,
             animation: false,
@@ -111,17 +111,28 @@
             let lon = parseFloat(strx);
             let lat = parseFloat(stry);
 
-            let rotatez = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lon));
-            let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(0 - lat));
+            if (viewer.scene.mode == 3) {
+                let rotatez = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lon));
+                let rotatex = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(0 - lat));
 
-            var mmm = Cesium.Matrix4.IDENTITY;
-            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
-            mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
+                var mmm = Cesium.Matrix4.IDENTITY;
+                mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
+                mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
-            item.modelMatrix = mmm;
-            viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
-            });
+                item.modelMatrix = mmm;
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
+                });
+            } else if (viewer.scene.mode == 2) {
+                let r = 6378137;
+                var mmm = item.modelMatrix;
+                var translation = Cesium.Cartesian3.fromArray([0, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
+                mmm = Cesium.Matrix4.multiplyByTranslation(mmm, translation, new Cesium.Cartesian4());
+                item.modelMatrix = mmm;
+
+            }
+
+
         }
 
         function reset() {
