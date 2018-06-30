@@ -129,10 +129,7 @@
                 var translation = Cesium.Cartesian3.fromArray([0, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
                 mmm = Cesium.Matrix4.multiplyByTranslation(mmm, translation, new Cesium.Cartesian4());
                 item.modelMatrix = mmm;
-
             }
-
-
         }
 
         function reset() {
