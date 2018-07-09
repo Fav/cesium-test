@@ -31,6 +31,7 @@
         <input type="button" value="go" onclick="goto()">
         <input type="button" value="go1" onclick="goto1()">
         <input type="button" value="reset" onclick="reset()">
+        <input type="button" value="switch" onclick="changeorder()">
     </div>
     <div id="credit"></div>
     <div id="cesiumContainer"></div>
@@ -62,7 +63,7 @@
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
-            let item = new Cesium.Primitive({
+            return new Cesium.Primitive({
                 geometryInstances: instance,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
                 appearance: new Cesium.EllipsoidSurfaceAppearance({
@@ -77,17 +78,16 @@
                     })
                 })
             });
-            return item;
         }
 
-        function createPrimitive2(ix, iy, width, height) {
+        function createPrimitive2(ix, iy, width, height, imagepath) {
             let instance2 = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
                     rectangle: Cesium.Rectangle.fromDegrees(ix, iy, ix + width, iy + height)
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
-            let item2 = new Cesium.Primitive({
+            return new Cesium.Primitive({
                 geometryInstances: instance2,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
                 appearance: new Cesium.EllipsoidSurfaceAppearance({
@@ -95,26 +95,25 @@
                         fabric: {
                             type: 'Image',
                             uniforms: {
-                                image: 'close.png'
+                                image: imagepath
                             }
                         }
                     })
                 })
             });
-            return item2;
         }
         let width = 20;
         let w1 = 20;
 
-        var item = createPrimitive(0, 0, width, width);
-        var item2 = createPrimitive2(-30, -10, 60, 20);
-        var item3 = createPrimitive2(width - 5, width - 5, w1, w1);
-        scene.primitives.add(item);
+        var item1 = createPrimitive(0, 0, width, width);
+        var item2 = createPrimitive2(-30, -10, 60, 20, 't2.png');
+        var item3 = createPrimitive2(width - 5, width - 5, w1, w1, 'close.png');
+        scene.primitives.add(item1);
         scene.primitives.add(item2);
         scene.primitives.add(item3);
 
         //材质都为图片的话，可以进行升降  raise lower
-        scene.primitives.raise(item);
+        scene.primitives.raise(item1);
 
         //已测试材质为图片 +  Cesium.Material.fromType('Dot') 的时候，不能进行升降，只能通过设置
 
@@ -164,24 +163,28 @@
                 mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
                 mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
-                item.modelMatrix = mmm;
+                item1.modelMatrix = mmm;
                 item2.modelMatrix = mmm;
                 viewer.camera.flyTo({
                     destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
                 });
             } else if (viewer.scene.mode == 2) {
                 let r = 6378137;
-                var mmm = item.modelMatrix;
+                var mmm = item1.modelMatrix;
                 var translation = Cesium.Cartesian3.fromArray([0, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
                 mmm = Cesium.Matrix4.multiplyByTranslation(mmm, translation, new Cesium.Cartesian4());
-                item.modelMatrix = mmm;
+                item1.modelMatrix = mmm;
                 item2.modelMatrix = mmm;
 
             }
         }
 
         function reset() {
-            item.modelMatrix = Cesium.Matrix4.IDENTITY;
+            item1.modelMatrix = Cesium.Matrix4.IDENTITY;
+        }
+
+        function changeorder() {
+            scene.primitives.lowerToBottom(scene.primitives.get(scene.primitives.length - 1));
         }
     </script>
 </body>
