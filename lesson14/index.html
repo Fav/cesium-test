@@ -53,6 +53,7 @@
 
         var scene = viewer.scene;
         var item;
+        var item2;
 
         function createPrimitive(ix, iy) {
             var instance = new Cesium.GeometryInstance({
@@ -73,9 +74,36 @@
             return item;
         }
 
+        function createPrimitive2(ix, iy) {
+            var instance2 = new Cesium.GeometryInstance({
+                geometry: new Cesium.RectangleGeometry({
+                    rectangle: Cesium.Rectangle.fromDegrees(2, 2, ix + 2, iy + 2),
+                    vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+                })
+            });
+            //使用抽象的Primitive而不是RectanglePrimitive  
+            item2 = new Cesium.Primitive({
+                geometryInstances: instance2,
+                //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
+                appearance: new Cesium.MaterialAppearance({
+                    material: new Cesium.Material({
+                        fabric: {
+                            type: 'Image',
+                            uniforms: {
+                                image: 'close.png'
+                            }
+                        }
+                    })
+                })
+            });
+            return item2;
+        }
+
         scene.primitives.add(createPrimitive(0, 0));
+        scene.primitives.add(createPrimitive2(0.5, 0.5));
+
         viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0)
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 3000000.0)
         });
 
         function checkNumber(theObj) {
@@ -120,6 +148,7 @@
                 mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
                 item.modelMatrix = mmm;
+                item2.modelMatrix = mmm;
                 viewer.camera.flyTo({
                     destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
                 });
@@ -129,6 +158,8 @@
                 var translation = Cesium.Cartesian3.fromArray([0, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
                 mmm = Cesium.Matrix4.multiplyByTranslation(mmm, translation, new Cesium.Cartesian4());
                 item.modelMatrix = mmm;
+                item2.modelMatrix = mmm;
+
             }
         }
 
