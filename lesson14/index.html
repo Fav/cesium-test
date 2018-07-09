@@ -55,11 +55,11 @@
         var item;
         var item2;
 
-        function createPrimitive(ix, iy) {
+        function createPrimitive(ix, iy, halfwidth, halfheight) {
             var instance = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
                     // rectangle: Cesium.Rectangle.fromDegrees(ix - 20, iy - 20, ix + 20, iy + 20),
-                    rectangle: Cesium.Rectangle.fromDegrees(ix - 2, iy - 2, ix + 2, iy + 2),
+                    rectangle: Cesium.Rectangle.fromDegrees(ix - halfwidth, iy - halfheight, ix + halfwidth, iy + halfheight),
                     vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
                 })
             });
@@ -74,10 +74,10 @@
             return item;
         }
 
-        function createPrimitive2(ix, iy) {
+        function createPrimitive2(ix, iy, width, height) {
             var instance2 = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
-                    rectangle: Cesium.Rectangle.fromDegrees(2, 2, ix + 2, iy + 2),
+                    rectangle: Cesium.Rectangle.fromDegrees(ix, iy, ix + width, iy + height),
                     vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
                 })
             });
@@ -98,9 +98,10 @@
             });
             return item2;
         }
-
-        scene.primitives.add(createPrimitive(0, 0));
-        scene.primitives.add(createPrimitive2(0.5, 0.5));
+        let width = 80;
+        let w1 = 10;
+        scene.primitives.add(createPrimitive(0, 0, width, width));
+        scene.primitives.add(createPrimitive2(width, width, w1, w1));
 
         viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(0, 0, 3000000.0)
