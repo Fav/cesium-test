@@ -41,7 +41,7 @@
             }),
             //geocoder: false,
             homeButton: false,
-            //sceneModePicker: false,
+            sceneModePicker: false,
             baseLayerPicker: false,
             navigationHelpButton: false,
             animation: false,
@@ -52,40 +52,45 @@
         });
 
         var scene = viewer.scene;
-        var item;
-        var item2;
 
         function createPrimitive(ix, iy, halfwidth, halfheight) {
-            var instance = new Cesium.GeometryInstance({
+            let instance = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
-                    // rectangle: Cesium.Rectangle.fromDegrees(ix - 20, iy - 20, ix + 20, iy + 20),
-                    rectangle: Cesium.Rectangle.fromDegrees(ix - halfwidth, iy - halfheight, ix + halfwidth, iy + halfheight),
-                    vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+                    rectangle: Cesium.Rectangle.fromDegrees(ix - halfwidth, iy - halfheight, ix + halfwidth, iy + halfheight) //,
+                        //height:500  //若材质为 Cesium.Material.fromType('Dot') 只能通过设置高度避免重叠时闪烁
+
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
-            item = new Cesium.Primitive({
+            let item = new Cesium.Primitive({
                 geometryInstances: instance,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
                 appearance: new Cesium.EllipsoidSurfaceAppearance({
-                    material: Cesium.Material.fromType('Dot')
+                    //material:Cesium.Material.fromType('Dot')
+                    material: new Cesium.Material({
+                        fabric: {
+                            type: 'Image',
+                            uniforms: {
+                                image: 't1.png'
+                            }
+                        }
+                    })
                 })
             });
             return item;
         }
 
         function createPrimitive2(ix, iy, width, height) {
-            var instance2 = new Cesium.GeometryInstance({
+            let instance2 = new Cesium.GeometryInstance({
                 geometry: new Cesium.RectangleGeometry({
-                    rectangle: Cesium.Rectangle.fromDegrees(ix, iy, ix + width, iy + height),
-                    vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT
+                    rectangle: Cesium.Rectangle.fromDegrees(ix, iy, ix + width, iy + height)
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
-            item2 = new Cesium.Primitive({
+            let item2 = new Cesium.Primitive({
                 geometryInstances: instance2,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
-                appearance: new Cesium.MaterialAppearance({
+                appearance: new Cesium.EllipsoidSurfaceAppearance({
                     material: new Cesium.Material({
                         fabric: {
                             type: 'Image',
@@ -98,13 +103,24 @@
             });
             return item2;
         }
-        let width = 80;
-        let w1 = 10;
-        scene.primitives.add(createPrimitive(0, 0, width, width));
-        scene.primitives.add(createPrimitive2(width, width, w1, w1));
+        let width = 20;
+        let w1 = 20;
+
+        var item = createPrimitive(0, 0, width, width);
+        var item2 = createPrimitive2(-30, -10, 60, 20);
+        var item3 = createPrimitive2(width - 5, width - 5, w1, w1);
+        scene.primitives.add(item);
+        scene.primitives.add(item2);
+        scene.primitives.add(item3);
+
+        //材质都为图片的话，可以进行升降  raise lower
+        scene.primitives.raise(item);
+
+        //已测试材质为图片 +  Cesium.Material.fromType('Dot') 的时候，不能进行升降，只能通过设置
+
 
         viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(0, 0, 3000000.0)
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0)
         });
 
         function checkNumber(theObj) {
