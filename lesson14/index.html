@@ -59,14 +59,15 @@
                 geometry: new Cesium.RectangleGeometry({
                     rectangle: Cesium.Rectangle.fromDegrees(ix - halfwidth, iy - halfheight, ix + halfwidth, iy + halfheight) //,
                         //height:500  //若材质为 Cesium.Material.fromType('Dot') 只能通过设置高度避免重叠时闪烁
-
+                        // ,
+                        // height: 100000
                 })
             });
             //使用抽象的Primitive而不是RectanglePrimitive  
             return new Cesium.Primitive({
                 geometryInstances: instance,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
-                appearance: new Cesium.EllipsoidSurfaceAppearance({
+                appearance: new Cesium.MaterialAppearance({
                     //material:Cesium.Material.fromType('Dot')
                     material: new Cesium.Material({
                         fabric: {
@@ -90,7 +91,7 @@
             return new Cesium.Primitive({
                 geometryInstances: instance2,
                 //使用该外观，可以使矩形覆盖在地球表面，或者悬浮一定的高度  
-                appearance: new Cesium.EllipsoidSurfaceAppearance({
+                appearance: new Cesium.MaterialAppearance({
                     material: new Cesium.Material({
                         fabric: {
                             type: 'Image',
@@ -163,8 +164,14 @@
                 mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatez, new Cesium.Cartesian4());
                 mmm = Cesium.Matrix4.multiplyByMatrix3(mmm, rotatex, new Cesium.Cartesian4());
 
+                let mmm2 = Cesium.Matrix4.clone(mmm);
+                let height = 1000000;
+                var translation = Cesium.Cartesian3.fromArray([0, 0, height]);
+                mmm2 = Cesium.Matrix4.multiplyByTranslation(mmm2, translation, new Cesium.Cartesian4());
+
                 item1.modelMatrix = mmm;
-                item2.modelMatrix = mmm;
+                item2.modelMatrix = mmm2;
+                item3.modelMatrix = mmm2;
                 viewer.camera.flyTo({
                     destination: Cesium.Cartesian3.fromDegrees(lon, lat, 30000000.0)
                 });
@@ -185,6 +192,7 @@
 
         function changeorder() {
             scene.primitives.lowerToBottom(scene.primitives.get(scene.primitives.length - 1));
+            item1.geometry.height = 10000000;
         }
     </script>
 </body>
