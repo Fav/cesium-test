@@ -108,7 +108,7 @@
 
         var item1 = createPrimitive(0, 0, width, width);
         var item2 = createPrimitive2(-30, -10, 60, 20, 't2.png');
-        var item3 = createPrimitive2(width - 5, width - 5, w1, w1, 'close.png');
+        var item3 = createPrimitive2(25, 5, w1, w1, 'close.png');
         scene.primitives.add(item1);
         scene.primitives.add(item2);
         scene.primitives.add(item3);
@@ -166,7 +166,7 @@
 
                 let mmm2 = Cesium.Matrix4.clone(mmm);
                 let height = 1000000;
-                var translation = Cesium.Cartesian3.fromArray([0, 0, height]);
+                var translation = Cesium.Cartesian3.fromArray([height, height, 0]);
                 mmm2 = Cesium.Matrix4.multiplyByTranslation(mmm2, translation, new Cesium.Cartesian4());
 
                 item1.modelMatrix = mmm;
