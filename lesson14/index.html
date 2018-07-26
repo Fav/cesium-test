@@ -42,7 +42,7 @@
             }),
             //geocoder: false,
             homeButton: false,
-            sceneModePicker: false,
+            //sceneModePicker: false,
             baseLayerPicker: false,
             navigationHelpButton: false,
             animation: false,
@@ -166,7 +166,7 @@
 
                 let mmm2 = Cesium.Matrix4.clone(mmm);
                 let height = 1000000;
-                var translation = Cesium.Cartesian3.fromArray([height, height, 0]);
+                var translation = Cesium.Cartesian3.fromArray([height, 0, 0]);
                 mmm2 = Cesium.Matrix4.multiplyByTranslation(mmm2, translation, new Cesium.Cartesian4());
 
                 item1.modelMatrix = mmm;
@@ -180,8 +180,20 @@
                 var mmm = item1.modelMatrix;
                 var translation = Cesium.Cartesian3.fromArray([0, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
                 mmm = Cesium.Matrix4.multiplyByTranslation(mmm, translation, new Cesium.Cartesian4());
+
+                let mmm2 = Cesium.Matrix4.clone(mmm);
+                let height2 = 100;
+                var translation2 = Cesium.Cartesian3.fromArray([height2, 0, 0]);
+                mmm2 = Cesium.Matrix4.multiplyByTranslation(mmm2, translation2, new Cesium.Cartesian4());
+
+                let mmm3 = Cesium.Matrix4.clone(mmm);
+                let height3 = 1000;
+                let translation3 = Cesium.Cartesian3.fromArray([height3, 0, 0]);
+                mmm3 = Cesium.Matrix4.multiplyByTranslation(mmm3, translation3, new Cesium.Cartesian4());
+
                 item1.modelMatrix = mmm;
-                item2.modelMatrix = mmm;
+                item2.modelMatrix = mmm2;
+                item3.modelMatrix = mmm3;
 
             }
         }
