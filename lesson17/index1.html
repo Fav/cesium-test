@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/CesiumUnminified/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.????
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        var scene = viewer.scene;
+        var camera = scene.camera;
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        scene.screenSpaceCameraController.enableRotate = false;
+
+        let defaultRotateAmount = Cesium.Math.PI / 360.0;
+        var rotatestart = false;
+        handler.setInputAction(function(movement) {
+            rotatestart= true;
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(function(movement) {
+            if(rotatestart){
+                let pt2 = movement.startPosition;
+                let pt3 = movement.endPosition;
+                camera.constrainedAxis = undefined;
+                camera.rotateDown(defaultRotateAmount*(pt3.y-pt2.y));
+                camera.rotateLeft(defaultRotateAmount*(pt3.x-pt2.x));
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        handler.setInputAction(function(movement) {
+            rotatestart = false;
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+    </script>
+</body>
+
+</html>
