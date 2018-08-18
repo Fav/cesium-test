@@ -51,8 +51,14 @@
 
         let defaultRotateAmount = Cesium.Math.PI / 360.0;
         var rotatestart = false;
+        let m1;
+        let m2;
+
         handler.setInputAction(function(movement) {
             rotatestart = true;
+
+            //获取起点相机逆矩阵
+            m1 = Cesium.Matrix4.clone(camera.viewMatrix);
         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
         handler.setInputAction(function(movement) {
@@ -62,12 +68,25 @@
                 camera.constrainedAxis = undefined;
                 camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
+
+                getQuaternion();
             }
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
         handler.setInputAction(function(movement) {
             rotatestart = false;
         }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+        function getQuaternion(){
+            //获取终点相机矩阵
+            m2 = Cesium.Matrix4.clone(camera.inverseViewMatrix);
+            //获取旋转矩阵-4阶
+            let rotateMatrix4 = Cesium.Matrix4.multiply(m2,m1,new Cesium.Matrix4()) ;
+            //3阶
+            let rotateMatrix3 = Cesium.Matrix4.getRotation(rotateMatrix4,new Cesium.Matrix3());
+            let quaternion = Cesium.Quaternion.fromRotationMatrix(rotateMatrix3);
+            console.log(quaternion);
+        }
     </script>
 </body>
 

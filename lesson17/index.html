@@ -54,18 +54,22 @@
         var rotatestart = false;
         let m1;
         let m2;
-        let r1;
-        let r2;
         handler.setInputAction(function(movement) {
             rotatestart = true;
-            //获取起点相机逆矩阵
-            m1 = Cesium.Matrix4.clone(camera.inverseViewMatrix);
+            //获取起点相机矩阵
+            m1 = Cesium.Matrix4.clone(camera.viewMatrix);
+            // console.log(m1);
+            m1[14]=-m1[14];
+            // console.log(m1);
+            // m1 = getCameraMirror();
         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
         handler.setInputAction(function(movement) {
             if (rotatestart) {
                 let pt2 = movement.startPosition;
                 let pt3 = movement.endPosition;
+                camera.constrainedAxis = undefined;
+                viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
 
                 getQuaternion();
@@ -80,14 +84,42 @@
         }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
         function getQuaternion(){
-            //获取终点相机矩阵
-            m2 = Cesium.Matrix4.clone(camera.viewMatrix);
-            //获取旋转矩阵-4阶
-            let rotateMatrix4 = Cesium.Matrix4.multiply(m1,m2,new Cesium.Matrix4()) ;
+            console.log(camera.viewMatrix);
+            console.log(camera.inverseViewMatrix);
+            //获取终点相机逆矩阵
+            m2 = Cesium.Matrix4.clone(camera.inverseViewMatrix);
+            m2[14]=-m2[14];
+            // m2 =getInverse();
+            //获取旋转矩阵-4阶，左乘，逆矩阵在前
+            let rotateMatrix4 = Cesium.Matrix4.multiply(m2,m1,new Cesium.Matrix4()) ;
             //3阶
             let rotateMatrix3 = Cesium.Matrix4.getRotation(rotateMatrix4,new Cesium.Matrix3());
             let quaternion = Cesium.Quaternion.fromRotationMatrix(rotateMatrix3);
-            console.log(quaternion);
+            // console.log(quaternion);
+        }
+
+        function getCameraMirror(){
+            let p1 =viewer.camera.position;
+            let position = new Cesium.Cartesian3(p1.x,p1.y,p1.z);
+            let heading = viewer.camera.heading;
+            let pitch =viewer.camera.pitch;
+            let roll =viewer.camera.roll;
+            let hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+            let orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
+            let res = Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+                new Cesium.Cartesian3(0.0, 0.0, 0.0), // translation
+                orientation,           // rotation
+                new Cesium.Cartesian3(1.0, 1.0, 1.0), // scale
+                new Cesium.Matrix4());
+    
+                console.log(res);
+                console.log(camera.viewMatrix);
+                return res;
+        }
+
+        function getInverse(){
+            return Cesium.Matrix4.inverse(getCameraMirror(),new Cesium.Matrix4());
         }
          
     </script>
