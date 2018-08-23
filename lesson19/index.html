@@ -64,14 +64,21 @@
         });
         let canvas = viewer.scene.canvas;
 
-        let showEye = function(percentage) {
+        let showEye = function() {
             document.getElementById('show').src = viewer.scene.canvas.toDataURL("image/png");
             viewer.scene.postRender.removeEventListener(showEye);
         };
 
-        viewer.camera.changed.addEventListener(function(percentage) {
+        viewer.camera.changed.addEventListener(function() {
             viewer.scene.postRender.addEventListener(showEye);
         });
+        window.onload = function() {
+            viewer.scene.postRender.addEventListener(showEye);
+        }
+
+        //setTimeout(function() {
+        //    viewer.scene.postRender.addEventListener(showEye);
+        //}, 1000);
     </script>
 </body>
 
