@@ -118,13 +118,14 @@
 
         var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
         scene.screenSpaceCameraController.enableRotate = false;
-        
+        scene.screenSpaceCameraController.enableZoom = false;
+
         camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
 
         camera.flyTo({
-            destination : Cesium.Cartesian3.fromDegrees(0, 0, camera.position.z),
+            destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000),
             orientation : {
-                heading : Cesium.Math.toRadians(0.0),
+                heading : Cesium.Math.toRadians(-23.0),
                 pitch : Cesium.Math.toRadians(-90.0),
                 roll : 0.0
             }
@@ -142,7 +143,7 @@
             if (rotatestart) {
                 let pt2 = movement.startPosition;
                 let pt3 = movement.endPosition;
-                camera.constrainedAxis = undefined;
+                //camera.constrainedAxis = undefined;
                 //viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
             }
