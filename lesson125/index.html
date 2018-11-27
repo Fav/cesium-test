@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit">
+        <input type="button" value="start" onclick="startRotate()">
+        <input type="button" value="stop" onclick="stopRotate()">
+        <input type="button" value="+" onclick="accelerated()">
+        <input type="button" value="-" onclick="deceleration()">
+    </div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.????
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            //homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        var scene = viewer.scene;
+        var camera = scene.camera;
+        //camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
+        
+        // 绘制南北极线
+        viewer.entities.add({
+            position : Cesium.Cartesian3.fromDegrees(0, 90),
+            point : {
+                show : true, // default
+                color : Cesium.Color.SKYBLUE, // default: WHITE
+                pixelSize : 10, // default: 1
+                outlineColor : Cesium.Color.YELLOW, // default: BLACK
+                outlineWidth : 3 // default: 0
+            }
+        });
+        viewer.entities.add({
+            position : Cesium.Cartesian3.fromDegrees(0, -90),
+            point : {
+                show : true, // default
+                color : Cesium.Color.SKYBLUE, // default: WHITE
+                pixelSize : 10, // default: 1
+                outlineColor : Cesium.Color.YELLOW, // default: BLACK
+                outlineWidth : 3 // default: 0
+            }
+        });
+
+        var orangeOutlined = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 250000,
+                                                                       0, 90, 250000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+
+        var orangeOutlined1 = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 0,
+                                                                       0, -90, 2500000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+        var orangeOutlined2 = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, 90, 0,
+                                                                       0, 90, 2500000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        scene.screenSpaceCameraController.enableRotate = false;
+        
+        camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+
+        camera.flyTo({
+            destination : Cesium.Cartesian3.fromDegrees(0, 0, camera.position.z),
+            orientation : {
+                heading : Cesium.Math.toRadians(0.0),
+                pitch : Cesium.Math.toRadians(-90.0),
+                roll : 0.0
+            }
+        });
+
+        let defaultRotateAmount = Cesium.Math.PI / 360.0;
+
+        //鼠标拖动
+        var rotatestart = false;
+        handler.setInputAction(function(movement) {
+            rotatestart = true;
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(function(movement) {
+            if (rotatestart) {
+                let pt2 = movement.startPosition;
+                let pt3 = movement.endPosition;
+                camera.constrainedAxis = undefined;
+                //viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
+                viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        handler.setInputAction(function(movement) {
+            rotatestart = false;
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+        
+        //旋转
+        let loop;
+        let vMax = 10;
+        let vMin = 0.01;
+        let vStep = 0.1;
+
+        let v =  1;
+        function startRotate(){
+            //自转
+            loop = setInterval(function(){
+                viewer.camera.rotateLeft(-defaultRotateAmount * v);
+            },10);
+        }
+        function stopRotate(){
+            clearInterval(loop);
+        }
+        function accelerated(){
+            if(v+vStep<vMax){
+                v = v+vStep;
+                stopRotate();
+                startRotate();
+            }
+        }
+        function deceleration(){
+            if(v - vStep> vMin){
+                v= v-vStep;
+                stopRotate();
+                startRotate();
+            }
+        }
+    </script>
+</body>
+
+</html>
