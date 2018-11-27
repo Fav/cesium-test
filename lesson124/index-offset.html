@@ -27,13 +27,8 @@
 <body>
     <div id="cesiumContainer"></div>
     <script>
-        var viewer = new Cesium.Viewer('cesiumContainer', 
-        {
-            imageryProvider: new Cesium.SingleTileImageryProvider({
-                url: 'worldimage.png',
-                rectangle:Cesium.Rectangle.fromDegrees(-360.0, -90.0, 0.0, 90.0)
-            }),
-    
+        
+        let option = {
             //homeButton: false,
             //sceneModePicker: false,
             baseLayerPicker: false,
@@ -42,27 +37,57 @@
             timeline: false,
             fullscreenButton: false,
             vrButton: false
-        });
+        };
 
-        viewer.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({
-            url: 'worldimage.png',
-            rectangle:Cesium.Rectangle.fromDegrees(0, -90.0, 360.0, 90.0)
-        }));
+        function drawMap(offset){
+            if(offset <= -180 || offset >= 180)
+                return;
 
-        viewer.scene.moon =null;
-        viewer.scene.sun =null;
-        
-        var redBox = viewer.entities.add({
-            name : 'Red box with black outline',
-            position: Cesium.Cartesian3.fromDegrees(107.0, 40.0, 300000.0),
-            box : {
-                dimensions : new Cesium.Cartesian3(400000.0, 300000.0, 500000.0),
-                material : Cesium.Color.RED.withAlpha(0.5),
-                outline : true,
-                outlineColor : Cesium.Color.BLACK
+            let start1 = 0.0;
+            let end1 = 0.0;
+            if(offset > 0){
+                start1 =  offset-540.0;
+                end1 = offset-180.0;
+            }else if(offset < 0){
+                start1 =  offset-180.0;
+                end1 = offset + 180.0;
+             }else if(offset == 0){
+                start1 = -180.0;
+                end1 = 180.0;
             }
-        });
-        //viewer.trackedEntity = redBox;
+
+            option.imageryProvider= new Cesium.SingleTileImageryProvider({
+                url: 'worldimage.jpg',
+                rectangle:Cesium.Rectangle.fromDegrees(start1, -90.0,end1, 90.0)
+            });
+
+            var viewer = new Cesium.Viewer('cesiumContainer', option);
+
+            if(offset != 0){
+                viewer.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+                    url: 'worldimage.jpg',
+                    rectangle:Cesium.Rectangle.fromDegrees(end1, -90.0, end1+360, 90.0)
+                }));
+             }
+            
+            var redBox = viewer.entities.add({
+                name : 'Red box with black outline',
+                position: Cesium.Cartesian3.fromDegrees(107.0, 40.0, 300000.0),
+                box : {
+                    dimensions : new Cesium.Cartesian3(400000.0, 300000.0, 500000.0),
+                    material : Cesium.Color.RED.withAlpha(0.5),
+                    outline : true,
+                    outlineColor : Cesium.Color.BLACK
+                }
+            });
+            //viewer.trackedEntity = redBox;
+        }
+
+        //drawMap(-170);
+        //drawMap(0);
+        drawMap(170);
+
+
     </script>
 </body>
 
