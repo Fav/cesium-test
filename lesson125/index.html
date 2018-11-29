@@ -143,9 +143,11 @@
             if (rotatestart) {
                 let pt2 = movement.startPosition;
                 let pt3 = movement.endPosition;
-                //camera.constrainedAxis = undefined;
-                //viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
+                camera.constrainedAxis = undefined;
+                viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+
             }
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
