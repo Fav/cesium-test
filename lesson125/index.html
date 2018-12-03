@@ -21,16 +21,44 @@
             padding: 0;
             overflow: hidden;
         }
+        #custom{
+            position:absolute;
+            top:10px;
+            left: 10px;
+            width: 200px;
+            height: 300px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
     </style>
 </head>
 
 <body>
-    <div id="credit">
-        <input type="button" value="start" onclick="startRotate()">
-        <input type="button" value="stop" onclick="stopRotate()">
-        <input type="button" value="+" onclick="accelerated()">
-        <input type="button" value="-" onclick="deceleration()">
+    <div id="credit"></div>
+    <div id="custom">
+        <div>
+            <input type="button" value="start" onclick="startRotate()">
+            <input type="button" value="stop" onclick="stopRotate()">
+            <input type="button" value="+" onclick="accelerated()">
+            <input type="button" value="-" onclick="deceleration()">
+        </div>
+        <!-- <div>
+            <label for="rx">x:</label>
+            <input type="text" name="rx" id="rx">
+            <label for="ry">y:</label>
+            <input type="text" name="ry" id="ry">
+            <label for="rz">z:</label>
+            <input type="text" name="rz" id="rz">
+        </div> -->
+        <div>
+            <input type="button" value="x" onclick="rotatex()">
+            <input type="button" value="y" onclick="rotatey()">
+            <input type="button" value="z" onclick="rotatez()">
+            <input type="button" value="地轴" onclick="rotateEarthAxis()">
+        </div>
     </div>
+
     <div id="cesiumContainer"></div>
     <script>
         var viewer = new Cesium.Viewer('cesiumContainer', {
@@ -52,7 +80,7 @@
         var scene = viewer.scene;
         var camera = scene.camera;
         //camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
-        
+        let rotateMark = 2;// 0--x 1--y 2--z 3--地轴
         // 绘制南北极线
         viewer.entities.add({
             position : Cesium.Cartesian3.fromDegrees(0, 90),
@@ -120,7 +148,8 @@
         scene.screenSpaceCameraController.enableRotate = false;
         scene.screenSpaceCameraController.enableZoom = false;
 
-        camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+        //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+        refreshRotateAxis();
 
         camera.flyTo({
             destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000),
@@ -146,7 +175,8 @@
                 camera.constrainedAxis = undefined;
                 viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
-                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+                //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+                refreshRotateAxis();
 
             }
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -165,7 +195,7 @@
         function startRotate(){
             //自转
             loop = setInterval(function(){
-                viewer.camera.rotateLeft(-defaultRotateAmount * v);
+                viewer.camera.rotateLeft(defaultRotateAmount * v);
             },10);
         }
         function stopRotate(){
@@ -184,6 +214,32 @@
                 stopRotate();
                 startRotate();
             }
+        }
+
+        //旋转轴
+        function refreshRotateAxis(){
+            if(0 == rotateMark)
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_X;
+            if(1 == rotateMark)
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Y;
+            if(2 == rotateMark)
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+        }
+        function rotatex(){
+            rotateMark = 0;
+            refreshRotateAxis();
+        }
+        function rotatey(){
+            rotateMark = 1;
+            refreshRotateAxis();
+        }
+        function rotatez(){
+            rotateMark = 2;
+            refreshRotateAxis();
+        }
+        function rotateEarthAxis(){
+            rotateMark = 3;
+            refreshRotateAxis();
         }
     </script>
 </body>
