@@ -26,7 +26,7 @@
             top:10px;
             left: 10px;
             width: 200px;
-            height: 50px;
+            height: 300px;
             opacity: 0.8;
             z-index: 999;
             background: gray;
@@ -43,6 +43,14 @@
             <input type="button" value="+" onclick="accelerated()">
             <input type="button" value="-" onclick="deceleration()">
         </div>
+        <!-- <div>
+            <label for="rx">x:</label>
+            <input type="text" name="rx" id="rx">
+            <label for="ry">y:</label>
+            <input type="text" name="ry" id="ry">
+            <label for="rz">z:</label>
+            <input type="text" name="rz" id="rz">
+        </div> -->
         <div>
             <input type="button" value="x" onclick="rotatex()">
             <input type="button" value="y" onclick="rotatey()">
@@ -100,7 +108,7 @@
             name : 'Orange line with black outline at height and following the surface',
             polyline : {
                 positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 250000,
-                                                                    0, 90, 250000]),
+                                                                       0, 90, 250000]),
                 width : 5,
                 material : new Cesium.PolylineOutlineMaterialProperty({
                     color : Cesium.Color.ORANGE,
@@ -114,7 +122,7 @@
             name : 'Orange line with black outline at height and following the surface',
             polyline : {
                 positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 0,
-                                                                    0, -90, 2500000]),
+                                                                       0, -90, 2500000]),
                 width : 5,
                 material : new Cesium.PolylineOutlineMaterialProperty({
                     color : Cesium.Color.ORANGE,
@@ -127,7 +135,7 @@
             name : 'Orange line with black outline at height and following the surface',
             polyline : {
                 positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, 90, 0,
-                                                                    0, 90, 2500000]),
+                                                                       0, 90, 2500000]),
                 width : 5,
                 material : new Cesium.PolylineOutlineMaterialProperty({
                     color : Cesium.Color.ORANGE,
@@ -137,13 +145,33 @@
             }
         });
 
-        ////添加坐标轴
-        //let axisCustom = new Cesium.DebugModelMatrixPrimitive({
-        //    //modelMatrix : transform,
-        //    length : 10000000000000.0
-        //})
-        //scene.primitives.add(axisCustom);
+        var orangeOutlined3 = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([45, 0, 0,
+                                                                       45, 0, 2500000]),
+                width : 15,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.RED,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+
+
+        var center =new Cesium.Cartesian3(0.0,0.0,0.0);
+        //var transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
         
+        // Show reference frame.  Not required.
+        let axisCustom = new Cesium.DebugModelMatrixPrimitive({
+            //modelMatrix : transform,
+            length : 10000000000000.0
+        })
+        scene.primitives.add(axisCustom);
+        
+
+
         var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
         scene.screenSpaceCameraController.enableRotate = false;
         //scene.screenSpaceCameraController.enableZoom = false;
@@ -166,10 +194,43 @@
             if (rotatestart) {
                 let pt2 = movement.startPosition;
                 let pt3 = movement.endPosition;
-                camera.constrainedAxis = null;
+                camera.constrainedAxis = undefined;
                 viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
                 viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
-                refreshRotateAxis();
+                //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+                //refreshRotateAxis();
+                //axisCustom.modelMatrix=Cesium.Matrix4.IDENTITY;
+               // var b = new Cesium.Matrix3();
+               // Cesium.Matrix4.getRotation(camera.inverseViewMatrix,b);
+               // Cesium.Matrix4.multiplyByMatrix3(axisCustom.modelMatrix, b, axisCustom.modelMatrix);
+                //let curCameraMatrix = camera.viewMatrix;
+
+                //console.log(camera.position);
+                //console.log("orgInverseCameraMatrix");
+                //console.log(orgInverseCameraMatrix);
+                //console.log("curCameraMatrix");
+                //console.log(curCameraMatrix);
+
+                //let result = new Cesium.Matrix4();
+                //Cesium.Matrix4.multiply(orgInverseCameraMatrix, curCameraMatrix, result);
+                //var rotate = new Cesium.Matrix3();
+                //Cesium.Matrix4.getRotation(result,rotate);
+                //var p = new Cesium.Cartesian3(0, 0, 1);
+                //var kk = Cesium.Matrix3.multiplyByVector(rotate, p, new Cesium.Cartesian3());
+                //camera.constrainedAxis=kk;
+
+                //let eleCurPos =camera.position;
+                //let norEleCurPos = Cesium.Cartesian3.normalize(eleCurPos,new Cesium.Cartesian3());
+                //let norEleOrgPos = Cesium.Cartesian3.normalize(eleOrgPos,new Cesium.Cartesian3());
+                //let rotateAxis = Cesium.Cartesian3.cross(norEleOrgPos,norEleCurPos,new Cesium.Cartesian3());
+                //let dotValue =Cesium.Cartesian3.dot(norEleOrgPos,norEleCurPos);
+                //let angle = Cesium.Math.acosClamped(dotValue);
+                //let rotateQuaternion = Cesium.Quaternion.fromAxisAngle(rotateAxis,angle);
+                //let matRotate3=Cesium.Matrix3.fromQuaternion(rotateQuaternion,new Cesium.Matrix3());
+                //let p = new Cesium.Cartesian3(0, 0, 1);
+                //let kk = Cesium.Matrix3.multiplyByVector(matRotate3, p, new Cesium.Cartesian3());
+                //camera.constrainedAxis=kk;
+
             }
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
@@ -187,14 +248,22 @@
         function startRotate(){
             //自转
             loop = setInterval(function(){
-                if(0 == rotateMark)//x轴
-                    viewer.camera.rotate(camera.direction,defaultRotateAmount * v);
-                if(1 == rotateMark)//y轴
-                    viewer.camera.rotateDown(defaultRotateAmount * v);
-                if(2 == rotateMark)//z轴
-                    viewer.camera.rotateLeft(defaultRotateAmount * v);
-                if(3 == rotateMark)//地轴
-                    viewer.camera.rotateLeft(defaultRotateAmount * v);
+                viewer.camera.rotateLeft(defaultRotateAmount * v);
+                //console.log(eleOrgPos);
+                //let eleCurPos =camera.position;
+                //console.log(eleCurPos);
+                //let eleCurPos =camera.position;
+                //let norEleCurPos = Cesium.Cartesian3.normalize(eleCurPos,new Cesium.Cartesian3());
+                //let norEleOrgPos = Cesium.Cartesian3.normalize(eleOrgPos,new Cesium.Cartesian3());
+                //let rotateAxis = Cesium.Cartesian3.cross(norEleOrgPos,norEleCurPos,new Cesium.Cartesian3());
+                //let dotValue =Cesium.Cartesian3.dot(norEleOrgPos,norEleCurPos);
+                //let angle = Cesium.Math.acosClamped(dotValue);
+                //let rotateQuaternion = Cesium.Quaternion.fromAxisAngle(rotateAxis,angle);
+                //let matRotate3=Cesium.Matrix3.fromQuaternion(rotateQuaternion,new Cesium.Matrix3());
+                //let p = new Cesium.Cartesian3(0, 0, 1);
+                //let kk = Cesium.Matrix3.multiplyByVector(matRotate3, p, new Cesium.Cartesian3());
+                //camera.constrainedAxis=kk;
+                
             },10);
         }
         function stopRotate(){
@@ -217,10 +286,15 @@
 
         //旋转轴
         function refreshRotateAxis(){
-            if(0 == rotateMark || 1 == rotateMark || 2 == rotateMark)//x,y,z轴
-                camera.constrainedAxis = null;
-            if(3 == rotateMark)//地轴
-                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+            if(0 == rotateMark)
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_X;
+            if(1 == rotateMark)
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Y;
+            if(2 == rotateMark)
+                //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+                //camera.constrainedAxis=new Cesium.Cartesian3(1.0,0.0,0.0);
+                camera.constrainedAxis=new Cesium.Cartesian3(1.0,1.0,0.0);
+
         }
         function rotatex(){
             rotateMark = 0;
@@ -243,6 +317,8 @@
                 destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000),
                 duration:0.0
             });
+            orgInverseCameraMatrix = camera.inverseViewMatrix;
+            eleOrgPos = camera.position.clone();
             rotateMark = 2;
             refreshRotateAxis();
         }
