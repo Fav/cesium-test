@@ -152,7 +152,7 @@
         //refreshRotateAxis();
         let orgInverseCameraMatrix = camera.inverseViewMatrix;
         let eleOrgPos = camera.position;
-        rotateReset();
+        init();
 
         let defaultRotateAmount = Cesium.Math.PI / 360.0;
 
@@ -185,6 +185,7 @@
 
         let v =  1;
         function startRotate(){
+            clearInterval(loop);
             //自转
             loop = setInterval(function(){
                 if(0 == rotateMark)//x轴
@@ -238,7 +239,7 @@
             rotateMark = 3;
             refreshRotateAxis();
         }
-        function rotateReset(){
+        function init(){
             camera.flyTo({
                 destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000),
                 duration:0.0
@@ -246,6 +247,20 @@
             rotateMark = 2;
             refreshRotateAxis();
         }
+        function rotateReset(){
+            camera.flyTo({
+                destination :Cesium.Cartesian3.fromDegrees(0, 0, camera.position.z),
+                orientation: {
+                    heading: 0,
+                    pitch: Cesium.Math.toRadians(-90.0),
+                    roll: 0.0
+                },
+                duration:0.0
+            });
+            rotateMark = 2;
+            refreshRotateAxis();
+        }
+
     </script>
 </body>
 
