@@ -247,9 +247,27 @@
             rotateMark = 2;
             refreshRotateAxis();
         }
+        // function rotateReset(){
+        //     let pt = camera.position;
+        //     camera.flyTo({
+        //         destination :Cesium.Cartesian3.fromDegrees(pt.x, 0, pt.z),
+        //         // orientation: {
+        //         //     heading: 0,
+        //         //     pitch: Cesium.Math.toRadians(-90.0),
+        //         //     roll: 0.0
+        //         // },
+        //         duration:0.0
+        //     });
+        //     rotateMark = 2;
+        //     refreshRotateAxis();
+        // }
         function rotateReset(){
+            let pt = camera.position;
+            let length2 = Math.sqrt(pt.x*pt.x+pt.z*pt.z);
+            if(pt.x<0)
+                length2 = -length2;
             camera.flyTo({
-                destination :Cesium.Cartesian3.fromDegrees(0, 0, camera.position.z),
+                destination : new Cesium.Cartesian3(length2, pt.y, 0),
                 orientation: {
                     heading: 0,
                     pitch: Cesium.Math.toRadians(-90.0),
