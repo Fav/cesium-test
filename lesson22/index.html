@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/CesiumUnminified/Cesium.js"></script>
+    <style>
+        @import url(../Build/CesiumUnminified/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            //sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+
+    // 2. Draw different instances each with a unique color
+    var rectangleInstance = new Cesium.GeometryInstance({
+        geometry : new Cesium.RectangleGeometry({
+        rectangle : Cesium.Rectangle.fromDegrees(-140.0, 30.0, -100.0, 40.0),
+        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+        }),
+        id : 'rectangle',
+        attributes : {
+        color : new Cesium.ColorGeometryInstanceAttribute(0.0, 1.0, 1.0, 0.5)
+        }
+    });
+    var ellipsoidInstance = new Cesium.GeometryInstance({
+        geometry : new Cesium.EllipsoidGeometry({
+        radii : new Cesium.Cartesian3(500000.0, 500000.0, 1000000.0),
+        vertexFormat : Cesium.VertexFormat.POSITION_AND_NORMAL
+        }),
+        modelMatrix : Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
+        Cesium.Cartesian3.fromDegrees(-95.59777, 40.03883)), new Cesium.Cartesian3(0.0, 0.0, 550000.0), new Cesium.Matrix4()),
+        id : 'ellipsoid',
+        attributes : {
+        color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA)
+        }
+    });
+    viewer.scene.primitives.add(new Cesium.Primitive({
+        geometryInstances : [rectangleInstance, ellipsoidInstance],
+        appearance : new Cesium.PerInstanceColorAppearance()
+    }));
+
+    </script>
+</body>
+
+</html>

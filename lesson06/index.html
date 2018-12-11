@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.????
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+
+        var wmtsProvider = new Cesium.WebMapTileServiceImageryProvider({
+            url: 'http://192.168.10.123:7080/PBS/rest/services/MyPBSService1/MapServer/tile/{TileMatrix}/{TileRow}/{TileCol}',
+            layer: 'MyPBSService1',
+            style: 'default',
+            format: 'image/jpg',
+            tileMatrixSetID: 'default028mm',
+            maximumLevel: 19
+        });
+        viewer.imageryLayers.addImageryProvider(wmtsProvider);
+
+        //var shadedRelief2 = new Cesium.WebMapTileServiceImageryProvider({
+        //	url : 'http://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/WMTS/tile/1.0.0/USGSShadedReliefOnly/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg',
+        //	layer : 'USGSShadedReliefOnly',
+        //	style : 'default',
+        //	format : 'image/jpeg',
+        //	tileMatrixSetID : 'default028mm',
+        //	maximumLevel: 19,
+        //	credit : new Cesium.Credit({ text : 'U. S. Geological Survey' })
+        //});
+        //viewer.imageryLayers.addImageryProvider(shadedRelief2);
+
+        // var shadedRelief1 = new Cesium.WebMapTileServiceImageryProvider({
+        //     url: 'http://192.168.10.123:7080/PBS/rest/services/MyPBSService1/MapServer/WMTS',
+        //     layer: 'MyPBSService1',
+        //     style: 'default',
+        //     format: 'image/jpeg',
+        //     tileMatrixSetID: 'default028mm',
+        //     // tileMatrixLabels : ['default028mm:0', 'default028mm:1', 'default028mm:2' ...],
+        //     maximumLevel: 19
+        // });
+        // viewer.imageryLayers.addImageryProvider(shadedRelief1); 
+
+        // var shadedRelief2 = new Cesium.WebMapTileServiceImageryProvider({
+        //     url: 'http://192.168.10.123:7080/PBS/rest/services/MyPBSService1/MapServer/WMTS/tile/1.0.0/USGSShadedReliefOnly/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg',
+        //     layer: 'USGSShadedReliefOnly',
+        //     style: 'default',
+        //     format: 'image/jpeg',
+        //     tileMatrixSetID: 'default028mm',
+        //     maximumLevel: 19,
+        //     credit: new Cesium.Credit({
+        //         text: 'U. S. Geological Survey'
+        //     })
+        // });
+        // viewer.imageryLayers.addImageryProvider(shadedRelief2);
+    </script>
+</body>
+
+</html>

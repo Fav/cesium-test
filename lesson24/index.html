@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/CesiumUnminified/Cesium.js"></script>
+    <style>
+        @import url(../Build/CesiumUnminified/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', 
+        {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+               url: '../img/worldimage.jpg'
+            }),
+
+            homeButton: false,
+            //sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+
+        function computeCirclularFlight(lon, lat, radius) {
+            let  Ea = 6378137;      //   赤道半径
+            let  Eb = 6356725;      // 极半径 
+            let positionArr=[];
+            positionArr.push(lon);
+            positionArr.push(lat);
+            //需求正北是0° cesium正东是0°
+            for (let i = 0; i <=90; i++) {
+                let dx = radius * Math.sin(i * Math.PI / 180.0);
+                let dy = radius * Math.cos(i * Math.PI / 180.0);
+
+                let ec = Eb + (Ea-Eb) * (90.0 - lat) / 90.0;
+                let ed = ec * Math.cos(lat * Math.PI / 180);
+
+                let BJD = lon + (dx / ed ) * 180.0 / Math.PI;
+                let BWD = lat + (dy / ec ) * 180.0 / Math.PI;
+
+                positionArr.push(BJD);
+                positionArr.push(BWD);
+            }
+            console.log(positionArr);
+
+            return positionArr;
+        }
+        let positionArr = computeCirclularFlight(-112.210693, 36.0994841, 3000);
+
+        viewer.entities.add({
+            polygon : {
+                hierarchy : new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(
+                    positionArr
+                )),
+                height : 0.0,
+                extrudedHeight : 1000.0,
+                outline : true,
+                outlineColor : Cesium.Color.WHITE.withAlpha(0.0),
+                outlineWidth : 1,
+                material : Cesium.Color.WHITE.withAlpha(0.5)
+            }
+        });
+
+        for(let i=0;i<positionArr.length;i=i+2)
+        {
+            viewer.entities.add({
+                position : Cesium.Cartesian3.fromDegrees(positionArr[i], positionArr[i+1]),
+                point : {
+                    show : true, // default
+                    color : Cesium.Color.SKYBLUE, // default: WHITE
+                    pixelSize : 10, // default: 1
+                    outlineColor : Cesium.Color.YELLOW, // default: BLACK
+                    outlineWidth : 3 // default: 0
+                }
+            });
+        }
+
+        viewer.zoomTo(viewer.entities);
+    </script>
+</body>
+
+</html>

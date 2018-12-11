@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/CesiumUnminified/Cesium.js"></script>
+    <style>
+        @import url(../Build/CesiumUnminified/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="credit"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        //定位到当前位置
+        var successCallback = function(position) {
+            // 由于使用了 'maximumAge' 选项， position 对象
+            // 保证最多已经获取 10 分钟
+            var lat = position.coords.latitude; //纬度
+            var lag = position.coords.longitude; //经度
+            console.log('纬度:' + lat + ',经度:' + lag);
+
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(lag, lat, 15000.0)
+            })
+        }
+
+        var errorCallback = function(error) {
+            // 做一些错误处理
+            // viewer.camera.flyTo({
+            //     destination : Cesium.Cartesian3.fromDegrees(114.40, 31.48, 15000.0)
+            // })
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("定位失败,用户拒绝请求地理定位");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("定位失败,位置信息是不可用");
+                    break;
+                case error.TIMEOUT:
+                    alert("定位失败,请求获取用户位置超时");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("定位失败,定位系统失效");
+                    break;
+            }
+        }
+
+        var options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          };
+          
+        window.navigator.geolocation.getCurrentPosition(successCallback,errorCallback,options);
+    </script>
+</body>
+
+</html>
