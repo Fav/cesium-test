@@ -52,6 +52,13 @@
         </div>
     </div>
 
+    <video id="trailer" muted="" autoplay="" loop="" crossorigin="" controls="" style="display: none;">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.webm" type="video/webm">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mp4" type="video/mp4">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mov" type="video/quicktime">
+        Your browser does not support the <code>video</code> element.
+    </video>
+
     <div id="cesiumContainer"></div>
     <script>
         var viewer = new Cesium.Viewer('cesiumContainer', {
@@ -61,6 +68,7 @@
             }),
             //geocoder: false,
             //homeButton: false,
+            selectionIndicator: false,
             sceneModePicker: false,
             baseLayerPicker: false,
             navigationHelpButton: false,
@@ -278,6 +286,19 @@
             rotateMark = 2;
             refreshRotateAxis();
         }
+
+        var bgVideo = document.getElementById('trailer');
+        viewer.entities.add({
+            id: 'bgVideo',
+            rectangle: {
+                //coordinates: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0),
+                coordinates: Cesium.Rectangle.fromDegrees(-150.0, -60.0, 150.0, 60.0),
+                material: bgVideo
+            }
+        });
+        bgVideo.play();
+
+
 
     </script>
 </body>
