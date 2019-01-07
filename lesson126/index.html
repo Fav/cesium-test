@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <script src="./measure.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        #custom {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            height: 50px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="custom">
+        <div>
+            <input type='button' class='model_id' value='长度' onclick='measuerLength()'>
+            <input type='button' class='model_id' value='长度(贴地)' onclick='measuerLength2()'>
+            <input type='button' class='model_id' value='面积' onclick='measureArea()'>
+            <input type='button' class='model_id' value='高度' onclick='measureHeight()'>
+            <input type='button' class='model_id' value='高度(复杂)' onclick='measureHeight2()'>
+            <input type='button' class='model_id' value='清除' onclick='clearDraw()'>
+            <input id='model_id_2_exitFly' class='model_id layui-layer-close' type='button' value='退出' />;
+        </div>
+    </div>
+
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            })
+        });
+
+        var measureSurface = new mars3d.Measure({
+            viewer: viewer,
+            terrain: true
+        });
+
+        function measuerLength2() {
+            measureSurface.measuerLength({
+                terrain: true
+            })
+        }
+
+        function clearDraw() {
+            measureSurface.clearMeasure()
+        }
+
+        function measuerLength() {
+            measureSurface.measuerLength({
+                terrain: false
+            })
+        }
+
+        function measuerLength2() {
+            measureSurface.measuerLength({
+                terrain: true
+            })
+        }
+
+        function measureArea() {
+            measureSurface.measureArea()
+        }
+
+        function measureHeight() {
+            measureSurface.measureHeight({
+                isSuper: false
+            })
+        }
+
+        function measureHeight2() {
+            measureSurface.measureHeight({
+                isSuper: true
+            })
+        }
+    </script>
+</body>
+
+</html>
