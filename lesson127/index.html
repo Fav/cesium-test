@@ -1,0 +1,230 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        #custom {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            height: 50px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="custom">
+        <div>
+            <!--<input type='button' class='model_id' value='长度' onclick='measuerLength()'>-->
+            <!-- <input type='button' class='model_id' value='测量' onclick='measuerLength2()'> -->
+            <!--<input type='button' class='model_id' value='面积' onclick='measureArea()'>
+            <input type='button' class='model_id' value='高度' onclick='measureHeight()'>
+            <input type='button' class='model_id' value='高度(复杂)' onclick='measureHeight2()'>-->
+            <input type='button' class='model_id' value='清除' onclick='clearDraw()'>
+
+            <input type='text' id='toolTip' width="200">
+            <!--<input id='model_id_2_exitFly' class='model_id layui-layer-close' type='button' value='退出' />;-->
+        </div>
+    </div>
+
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            geocoder: false,
+            homeButton: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            infoBox: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false,
+            sceneMode: Cesium.SceneMode.SCENE3D,
+            creditContainer: 'credit',
+            selectionIndicator: false,
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+                    // url: 'land.jpg'
+            })
+        });
+
+        // viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+        function createPoint(worldPosition, text) {
+            var point = viewer.entities.add({
+                position: worldPosition,
+                point: {
+                    color: Cesium.Color.WHITE,
+                    pixelSize: 5
+                        // ,heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                },
+                label: {
+                    text: text,
+                    font: '14pt monospace',
+                    color: Cesium.Color.RED,
+                    backgroundColor: Cesium.Color.CORAL,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    outlineWidth: 2,
+                    //垂直位置
+                    heightReference: Cesium.HeightReference.NONE,
+                    verticalOrigin: Cesium.VerticalOrigin.TOP,
+                    pixelOffset: new Cesium.Cartesian2(50, 0)
+                }
+            });
+            return point;
+        }
+        var labeltems = [];
+        var allLines = []; //所有线的点集合
+        var allLineItems = []; //cesium 线对象(polyline)
+        var allLabelItems = []; //cesium 所有点对象
+
+        function drawShape(positionData) {
+            return viewer.entities.add({
+                polyline: {
+                    positions: positionData,
+                    //clampToGround: true,
+                    width: 3
+                }
+            });
+        }
+
+        var activeShapePoints = [];
+        var activeShape;
+        var floatingPoint;
+        var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+        handler.setInputAction(function(event) {
+            // We use `viewer.scene.pickPosition` here instead of `viewer.camera.pickEllipsoid` so that
+            // we get the correct point when mousing over terrain.
+            //var earthPosition = viewer.scene.pickPosition(event.position);//地形上
+            var earthPosition = viewer.camera.pickEllipsoid(event.position);
+
+            // `earthPosition` will be undefined if our mouse is not over the globe.
+            if (Cesium.defined(earthPosition)) {
+                if (activeShapePoints.length === 0) {
+                    floatingPoint = createPoint(earthPosition, "");
+                    labeltems.push(floatingPoint);
+                    activeShapePoints.push(earthPosition);
+                    var dynamicPositions = new Cesium.CallbackProperty(function() {
+                        return activeShapePoints;
+                    }, false);
+                    activeShape = drawShape(dynamicPositions);
+                }
+                activeShapePoints.push(earthPosition);
+                let dis = getLineAllDis(activeShapePoints);
+                labeltems.push(createPoint(earthPosition, dis.toString() + '公里'));
+
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+        handler.setInputAction(function(event) {
+            if (Cesium.defined(floatingPoint)) {
+                var newPosition = viewer.camera.pickEllipsoid(event.endPosition);
+
+                if (Cesium.defined(newPosition)) {
+                    floatingPoint.position.setValue(newPosition);
+                    activeShapePoints.pop();
+                    activeShapePoints.push(newPosition);
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        // Redraw the shape so it's not dynamic and remove the dynamic shape.
+        function terminateShape() {
+            viewer.entities.remove(floatingPoint);
+            viewer.entities.remove(activeShape);
+            labeltems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+            floatingPoint = undefined;
+            activeShape = undefined;
+            activeShapePoints = [];
+            labeltems = [];
+        }
+        handler.setInputAction(function(event) {
+            activeShapePoints.pop();
+            //关闭当前绘制，创建新线段
+            allLines.push([].concat(activeShapePoints)); //保存副本
+            //清空当前绘制
+            clean();
+            //重新绘制所有历史记录
+            allLines.forEach(lb => {
+                allLineItems.push(drawShape(lb));
+                let sum = 0;
+                lb.forEach((pt, index) => {
+                    if (index == 0)
+                        allLabelItems.push(createPoint(pt, "00.00公里"));
+                    else {
+                        sum += getLineDis(lb[index - 1], lb[index]);
+                        allLabelItems.push(createPoint(pt, sum.toFixed(2) + "公里"));
+                    }
+                });
+            });
+
+        }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+        function clean() {
+            terminateShape();
+            allLineItems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+            allLabelItems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+        }
+
+        function clearDraw() {
+            clean();
+            allLines = [];
+            allLabelItems = [];
+        }
+        //获取俩点的距离，返回公里单位值
+        function getLineDis(startPoint, endPoint) {
+            var x2 = (endPoint.x - startPoint.x) * (endPoint.x - startPoint.x)
+            var y2 = (endPoint.y - startPoint.y) * (endPoint.y - startPoint.y);
+            var dis = Math.sqrt(x2 + y2) / 1000;
+            return dis;
+        }
+
+        function getLineAllDis(activeShapePoints) {
+            let sum = 0.0;
+            for (let i = 1; i < activeShapePoints.length; i++)
+                sum += getLineDis(activeShapePoints[i], activeShapePoints[i - 1]);
+            return sum.toFixed(2);
+        }
+
+        function sum(arr) {
+            var s = 0;
+            for (var i = arr.length - 1; i >= 0; i--) {
+                s += Number(arr[i]);
+            }
+            return s;
+        }
+    </script>
+
+</body>
+
+</html>
