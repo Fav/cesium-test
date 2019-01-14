@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #custom{
+            position:absolute;
+            top:10px;
+            left: 10px;
+            width: 300px;
+            height: 200px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+        .customaliax input{
+            width:40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="custom">
+        <div>
+            <input type="button" value="start" onclick="startRotate()">
+            <input type="button" value="stop" onclick="stopRotate()">
+            <!-- <input type="button" value="+" onclick="accelerated()">
+            <input type="button" value="-" onclick="deceleration()"> -->
+        </div>
+        <div class="customaliax">
+            <label for="ax">x:</label>
+            <input type="number" name="ax" id="ax" value=0.00>
+            <label for="ay">y:</label>
+            <input type="number" name="ay" id="ay" value=0.00>
+            <label for="az">z:</label>
+            <input type="number" name="az" id="az" value=1.00>
+            <input type="button" value="apply" onclick="rotatecustom()">
+        </div>
+        <div>
+            <input type="button" value="x" onclick="rotatex()">
+            <input type="button" value="y" onclick="rotatey()">
+            <input type="button" value="z" onclick="rotatez()">
+            <input type="button" value="地轴" onclick="rotateEarthAxis()">
+            <input type="button" value="reset" onclick="rotateReset()">
+        </div>
+        <div>
+            <label for="roundCount">每分钟圈数:</label>
+            <input type="number" name="roundCount" id="roundCount" value=1.00>
+            <input type="button" value="apply" onclick="refreshrate()">
+        </div>
+    </div>
+
+    <video id="trailer" muted="" autoplay="" loop="" crossorigin="" controls="" style="display: none;">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.webm" type="video/webm">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mp4" type="video/mp4">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mov" type="video/quicktime">
+        Your browser does not support the <code>video</code> element.
+    </video>
+
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.????
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            //homeButton: false,
+            selectionIndicator: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        var scene = viewer.scene;
+        var camera = scene.camera;
+        //camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
+        let rotateMark = 2;// 0--x 1--y 2--z 3--地轴
+        // 绘制南北极线
+        viewer.entities.add({
+            position : Cesium.Cartesian3.fromDegrees(0, 90),
+            point : {
+                show : true, // default
+                color : Cesium.Color.SKYBLUE, // default: WHITE
+                pixelSize : 10, // default: 1
+                outlineColor : Cesium.Color.YELLOW, // default: BLACK
+                outlineWidth : 3 // default: 0
+            }
+        });
+        viewer.entities.add({
+            position : Cesium.Cartesian3.fromDegrees(0, -90),
+            point : {
+                show : true, // default
+                color : Cesium.Color.SKYBLUE, // default: WHITE
+                pixelSize : 10, // default: 1
+                outlineColor : Cesium.Color.YELLOW, // default: BLACK
+                outlineWidth : 3 // default: 0
+            }
+        });
+
+        var orangeOutlined = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 250000,
+                                                                    0, 90, 250000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+
+        var orangeOutlined1 = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, -90, 0,
+                                                                    0, -90, 2500000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+        var orangeOutlined2 = viewer.entities.add({
+            name : 'Orange line with black outline at height and following the surface',
+            polyline : {
+                positions : Cesium.Cartesian3.fromDegreesArrayHeights([0, 90, 0,
+                                                                    0, 90, 2500000]),
+                width : 5,
+                material : new Cesium.PolylineOutlineMaterialProperty({
+                    color : Cesium.Color.ORANGE,
+                    outlineWidth : 2,
+                    outlineColor : Cesium.Color.BLACK
+                })
+            }
+        });
+
+        ////添加坐标轴
+        //let axisCustom = new Cesium.DebugModelMatrixPrimitive({
+        //    //modelMatrix : transform,
+        //    length : 10000000000000.0
+        //})
+        //scene.primitives.add(axisCustom);
+        
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        scene.screenSpaceCameraController.enableRotate = false;
+        //scene.screenSpaceCameraController.enableZoom = false;
+
+        //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+        //refreshRotateAxis();
+        let orgInverseCameraMatrix = camera.inverseViewMatrix;
+        let eleOrgPos = camera.position;
+                
+        //旋转
+        let loop;
+        let vMax = 10;
+        let vMin = 0.01;
+        let vStep = 0.1;
+        let timestep =10;//10毫秒转一次，避免卡顿
+        let v =  1;
+
+        init();
+
+        let defaultRotateAmount = Cesium.Math.PI / 180.0;
+
+        //鼠标拖动
+        var rotatestart = false;
+        handler.setInputAction(function(movement) {
+            rotatestart = true;
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(function(movement) {
+            if (rotatestart) {
+                let pt2 = movement.startPosition;
+                let pt3 = movement.endPosition;
+                camera.constrainedAxis = null;
+                viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
+                viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
+                refreshRotateAxis();
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        handler.setInputAction(function(movement) {
+            rotatestart = false;
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+
+        function startRotate(){
+            clearInterval(loop);
+            //自转
+            loop = setInterval(function(){
+                if(0 == rotateMark)//x轴
+                    viewer.camera.rotate(camera.direction,defaultRotateAmount * v);
+                if(1 == rotateMark)//y轴
+                    viewer.camera.rotateDown(defaultRotateAmount * v);
+                if(2 == rotateMark)//z轴
+                    viewer.camera.rotateLeft(defaultRotateAmount * v);
+                if(3 == rotateMark)//地轴
+                    viewer.camera.rotateLeft(defaultRotateAmount * v);
+                if(4 == rotateMark)//自定义轴
+                    viewer.camera.rotate(camera.constrainedAxis,defaultRotateAmount * v);
+            },timestep);
+        }
+        function stopRotate(){
+            clearInterval(loop);
+        }
+        function accelerated(){
+            if(v+vStep<vMax){
+                v = v+vStep;
+                stopRotate();
+                startRotate();
+            }
+        }
+        function deceleration(){
+            if(v - vStep> vMin){
+                v= v-vStep;
+                stopRotate();
+                startRotate();
+            }
+        }
+
+        //旋转轴
+        function refreshRotateAxis(){
+            if(0 == rotateMark || 1 == rotateMark || 2 == rotateMark){
+                //x,y,z轴值
+                camera.constrainedAxis = null;
+            }else if(3 == rotateMark)//地轴
+                camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+            else if(4 == rotateMark){
+                let rx = Number(document.getElementById('ax').value);
+                let ry = Number(document.getElementById('ay').value);
+                let rz = Number(document.getElementById('az').value);
+                camera.constrainedAxis = new Cesium.Cartesian3(rx,ry, rz);
+            }
+        }
+        function rotatex(){
+            rotateMark = 0;
+            refreshRotateAxis();
+        }
+        function rotatey(){
+            rotateMark = 1;
+            refreshRotateAxis();
+        }
+        function rotatez(){
+            rotateMark = 2;
+            refreshRotateAxis();
+        }
+        function rotateEarthAxis(){
+            rotateMark = 3;
+            refreshRotateAxis();
+        }
+        function init(){
+            camera.flyTo({
+                destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000),
+                duration:0.0
+            });
+
+            //计算速度
+            refreshrate();
+
+            rotateMark = 2;
+            refreshRotateAxis();
+        }
+        // function rotateReset(){
+        //     let pt = camera.position;
+        //     camera.flyTo({
+        //         destination :Cesium.Cartesian3.fromDegrees(pt.x, 0, pt.z),
+        //         // orientation: {
+        //         //     heading: 0,
+        //         //     pitch: Cesium.Math.toRadians(-90.0),
+        //         //     roll: 0.0
+        //         // },
+        //         duration:0.0
+        //     });
+        //     rotateMark = 2;
+        //     refreshRotateAxis();
+        // }
+        function rotateReset(){
+            let pt = camera.position;
+            let length2 = Math.sqrt(pt.x*pt.x+pt.z*pt.z);
+            if(pt.x<0)
+                length2 = -length2;
+            camera.flyTo({
+                destination : new Cesium.Cartesian3(length2, pt.y, 0),
+                orientation: {
+                    heading: 0,
+                    pitch: Cesium.Math.toRadians(-90.0),
+                    roll: 0.0
+                },
+                duration:0.0
+            });
+            rotateMark = 2;
+            refreshRotateAxis();
+        }
+        function rotatecustom(){
+            rotateMark = 4;
+            refreshRotateAxis();
+        }
+        function refreshrate(){
+            let roundCount = Number(document.getElementById('roundCount').value);
+            v=360*timestep/(60000*roundCount);
+        }
+        
+    </script>
+</body>
+
+</html>
