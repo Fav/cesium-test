@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #custom{
+            position:absolute;
+            top:10px;
+            left: 10px;
+            width: 200px;
+            height: 50px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="credit"></div>
+    <div id="custom">
+        <div>
+            <input type="button" value="start" onclick="startRotate()">
+            <input type="button" value="stop" onclick="stopRotate()">
+            <input type="button" value="+" onclick="accelerated()">
+            <input type="button" value="-" onclick="deceleration()">
+        </div>
+        <div>
+            <input type="button" value="x" onclick="rotatex()">
+            <input type="button" value="y" onclick="rotatey()">
+            <input type="button" value="z" onclick="rotatez()">
+            <input type="button" value="地轴" onclick="rotateEarthAxis()">
+            <input type="button" value="reset" onclick="rotateReset()">
+        </div>
+    </div>
+
+    <video id="trailer" muted="" autoplay="" loop="" crossorigin="" controls="" style="display: none;">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.webm" type="video/webm">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mp4" type="video/mp4">
+        <source src="https://cesiumjs.org/videos/Sandcastle/big-buck-bunny_trailer.mov" type="video/quicktime">
+        Your browser does not support the <code>video</code> element.
+    </video>
+
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            //2.????
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+            //geocoder: false,
+            //homeButton: false,
+            selectionIndicator: false,
+            sceneModePicker: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            creditContainer: "credit",
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false
+        });
+        var scene = viewer.scene;
+        var camera = scene.camera;
+        //camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
+        let rotateMark = 2;// 0--x 1--y 2--z 3--地轴
+
+        ////添加坐标轴
+        //let axisCustom = new Cesium.DebugModelMatrixPrimitive({
+        //    //modelMatrix : transform,
+        //    length : 10000000000000.0
+        //})
+        //scene.primitives.add(axisCustom);
+        
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        scene.screenSpaceCameraController.enableRotate = false;
+        //scene.screenSpaceCameraController.enableZoom = false;
+
+        //camera.constrainedAxis=Cesium.Cartesian3.UNIT_Z;
+        //refreshRotateAxis();
+        let orgInverseCameraMatrix = camera.inverseViewMatrix;
+        let eleOrgPos = camera.position;
+
+        let defaultRotateAmount = Cesium.Math.PI / 360.0;
+
+        let pStartDrag;
+        //鼠标拖动
+        var rotatestart = false;
+        handler.setInputAction(function(movement) {
+            rotatestart = true;
+
+            let pt = camera.pickEllipsoid(movement.position);
+            if(Cesium.defined(pt))
+                pStartDrag = Cesium.Cartographic.fromCartesian(pt);
+
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(function(movement) {
+            if (rotatestart) {
+                let pt2 = movement.startPosition;
+                let pt3 = movement.endPosition;
+                camera.constrainedAxis = null;
+
+                //我说的方法
+                let ptstartp = Cesium.Cartographic.fromCartesian(camera.pickEllipsoid(movement.startPosition));
+                let ptendtp = Cesium.Cartographic.fromCartesian(camera.pickEllipsoid(movement.endPosition));
+                camera.rotateUp(ptendtp.latitude-ptstartp.latitude);
+                camera.rotateLeft(ptendtp.longitude-ptstartp.longitude);
+
+                // //test-nouse
+                // let pEnd = Cesium.Cartographic.fromCartesian(camera.pickEllipsoid(movement.endPosition));
+
+                // let pStartCar3 = new Cesium.Cartesian3(pStartDrag.longitude,pStartDrag.latitude,pStartDrag.height);
+                // let pEndCar3 = new Cesium.Cartesian3(pEnd.longitude,pEnd.latitude,pEnd.height);
+
+                // var norStart =  Cesium.Cartesian3.normalize(pStartCar3, new Cesium.Cartesian3());
+                // var norEnd = Cesium.Cartesian3.normalize(pEndCar3, new Cesium.Cartesian3());
+                // var rotateAxis = Cesium.Cartesian3.cross(norEnd, norStart, new Cesium.Cartesian3());
+                // var dotValue = Cesium.Cartesian3.dot(norEnd, norStart);
+                // var angle = Cesium.Math.acosClamped(dotValue);
+                // var rotateQuaternion = Cesium.Quaternion.fromAxisAngle(rotateAxis, angle);
+                // var matRotate3 = Cesium.Matrix3.fromQuaternion(rotateQuaternion, new Cesium.Matrix3())
+                // camera.viewMatrix = Cesium.Matrix3.multiply(matRotate3, camera.viewMatrix, new Cesium.Cartesian3());
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        handler.setInputAction(function(movement) {
+            rotatestart = false;
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+        
+    </script>
+</body>
+
+</html>
