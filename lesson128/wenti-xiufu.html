@@ -1,0 +1,1984 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <link rel="stylesheet" href="layui/css/layui.css">
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <!-- <script src="jquery/jquery-3.3.1.min.js"></script> -->
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <script src="jquery.timers-1.2.js"></script>
+    <script src="layui/layui.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+
+        html, body, #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <input type="button" value="开始旋转" onclick="startRotate(getRotateModel())"/>
+    <div id="videoDiv" style="display:none;">
+        <video id="bgVideo"  muted loop></video>
+    </div>
+    <div id="credit"></div>
+    <div id="cesiumContainer"></div>
+  
+    <script>
+
+            //获取当前CurSceneModel
+            var getCurSceneModel = function () {
+                //return JSON.parse(bkResponse.CurSceneModel());
+            }
+             
+            var getRotateModel = function () {
+                return JSON.parse("{\"AutoRotate\":true,\"RotateCount\":1,\"AxisX\":1.0,\"AxisY\":0.0,\"AxisZ\":0.0,\"IsEarthAxis\":false}");
+            }
+
+            var IsDragZ = true;
+
+            var projectResourcePath = 'ProjectResource/';
+            var scenePath = 'ProjectResource/Scene';
+            //var curScenePath = scenePath + "/" + getCurSceneModel().SceneID;
+
+            var playFlag = true;
+            var rotateStart = false;
+
+            var camInitialMatrix;//相机的初始矩阵
+
+            var defaultRotateAmount = Cesium.Math.PI / 180.0;//角度转化为弧度(rad) 
+  
+            var viewer = new Cesium.Viewer('cesiumContainer', {
+                geocoder: false,
+                homeButton: false,
+                sceneModePicker: false,
+                baseLayerPicker: false,
+                navigationHelpButton: false,
+                animation: false,
+                timeline: false,
+                fullscreenButton: false,
+                vrButton: false,
+                sceneMode: Cesium.SceneMode.SCENE3D,
+                creditContainer: 'credit',
+                selectionIndicator: false,
+                imageryProvider: new Cesium.SingleTileImageryProvider({
+                    url: '../img/worldimage.jpg'
+                    // url: 'land.jpg'
+                })
+            });
+
+            var scene = viewer.scene;
+            var camera = viewer.scene.camera;
+            var layers = viewer.imageryLayers;
+            var entities = viewer.entities;
+
+            // scene.skyBox = new Cesium.SkyBox({
+            //     sources: {
+            //         positiveX: 'skybox_px.png',
+            //         negativeX: 'skybox_nx.png',
+            //         positiveY: 'skybox_py.png',
+            //         negativeY: 'skybox_ny.png',
+            //         positiveZ: 'skybox_pz.png',
+            //         negativeZ: 'skybox_nz.png'
+            //     }
+            // });
+
+
+            scene.screenSpaceCameraController.enableTranslate = true;
+
+            scene.screenSpaceCameraController.enableRotate = false;
+            
+            scene.screenSpaceCameraController.enableZoom = true;
+
+            var curPickedEleID = null;
+
+            var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+
+            var bgVideo = document.getElementById("bgVideo");
+
+            var norEleLeftDownPos = new Cesium.Cartesian3();
+            var leftDownMat4 = new Cesium.Matrix4();
+            
+            var preFrameMouseLonAndLat;
+   
+            
+            //鼠标左键按下事件
+            handler.setInputAction(function (movement) {
+        
+                rotateStart = true;
+                var pickedObject = scene.pick(movement.position);
+                var cartesian = camera.pickEllipsoid(movement.position, scene.globe.ellipsoid);
+
+                if (cartesian) {
+                    var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+
+                    preFrameMouseLonAndLat = cartographic;
+
+                    var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                    var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+
+                    if (pickingMode) {
+                        document.getElementById('txtPickLong').value = calPickLongOffset(longitudeString);
+                        document.getElementById('txtPickLat').value = latitudeString;
+                    }
+                    else if (Cesium.defined(pickedObject)) {
+
+                        scene.screenSpaceCameraController.enableTranslate = false;
+                        scene.screenSpaceCameraController.enableTilt = false;
+
+                        eleClick(pickedObject.id);
+
+                        var eleLeftDownPos = Cesium.Cartesian3.fromDegrees(longitudeString, latitudeString);
+
+                        Cesium.Cartesian3.normalize(eleLeftDownPos, norEleLeftDownPos);
+
+                        leftDownMat4 = Cesium.Matrix4.clone(getPrimitiveByID(pickedObject.id).modelMatrix);
+                    }
+                }
+
+                
+            }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+
+            //鼠标左键弹起事件
+            handler.setInputAction(function (movement) {
+
+                if (scene.mode == Cesium.SceneMode.SCENE3D) {
+                    
+                    scene.screenSpaceCameraController.enableTilt = true;
+                }
+
+                scene.screenSpaceCameraController.enableTranslate = true;
+
+
+                curPickedEleID = null;
+                rotateStart = false;
+
+            }, Cesium.ScreenSpaceEventType.LEFT_UP);
+            
+
+            //鼠标移动事件
+            handler.setInputAction(function (movement) {
+
+                var cartesian = camera.pickEllipsoid(movement.endPosition, scene.globe.ellipsoid);
+                if(!cartesian)
+                    return;
+                var longitudeString, latitudeString;
+
+                var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+ 
+
+                //球体旋转控制
+                if (rotateStart && scene.mode == Cesium.SceneMode.SCENE3D) {
+
+                    if ((curPickedEleID != null && typeof (curPickedEleID.id) != "undefined") ||
+                        curPickedEleID == null) {
+
+                        //let startPos = movement.startPosition;
+                        //let endPos = movement.endPosition;
+
+                        camera.constrainedAxis = null;
+
+                        if (IsDragZ) {
+                            camera.rotateUp(cartographic.latitude - preFrameMouseLonAndLat.latitude);
+                        }
+
+                        camera.rotateLeft(cartographic.longitude - preFrameMouseLonAndLat.longitude);
+
+                        // preFrameMouseLonAndLat = curFrameMouseLonAndLat;
+                    }
+                }
+
+
+                if (cartesian) {
+
+                    //var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                    //longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+                    //latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+
+                    if (pickingMode) {
+                        pickEntity.position = cartesian;
+                        pickEntity.label.show = true;
+                        pickEntity.label.text =
+                            '经度: ' + (calPickLongOffset(longitudeString)) + '\u00B0' +
+                            '\n纬度: ' + (latitudeString) + '\u00B0';
+                    }
+                    else {
+                        pickEntity.label.show = false;
+                    }
+                    if (curPickedEleID != null && !pickingMode) {
+
+                        if ((curPickedEleID != null && typeof (curPickedEleID.id) != "undefined"))
+                            return;
+
+                        if (curPickedEleID.indexOf('_') != -1)
+                            return;
+
+                        var ele = getEleByID(curPickedEleID)
+
+                        if (ele == null)
+                            return;
+
+                        if (!ele.CanMove)
+                            return;
+
+                        if (scene.mode == Cesium.SceneMode.SCENE3D) {
+
+                            var eleCurPos = Cesium.Cartesian3.fromDegrees(longitudeString, latitudeString);
+                            var norEleCurPos = Cesium.Cartesian3.normalize(eleCurPos, new Cesium.Cartesian3());
+
+                            var rotateAxis = Cesium.Cartesian3.cross(norEleLeftDownPos, norEleCurPos, new Cesium.Cartesian3());
+
+                            var dotValue = Cesium.Cartesian3.dot(norEleLeftDownPos, norEleCurPos);
+                            var angle = Cesium.Math.acosClamped(dotValue);
+
+                            var rotateQuaternion = Cesium.Quaternion.fromAxisAngle(rotateAxis, angle);
+                            var matRotate3 = Cesium.Matrix3.fromQuaternion(rotateQuaternion, new Cesium.Matrix3())
+                            var matRotate4 = Cesium.Matrix4.fromRotationTranslation(matRotate3, Cesium.Cartesian3.ZERO, new Cesium.Matrix4())
+
+                            var eleRotateMatrix = Cesium.Matrix4.multiply(matRotate4, leftDownMat4, new Cesium.Matrix4());
+
+                            /////////////////
+                            var zeroLatilongPos = Cesium.Cartesian3.fromDegrees(0, 0);
+                            //得到当前旋转后的中心点三维坐标
+                            var curCenterPos = Cesium.Matrix4.multiplyByPoint(eleRotateMatrix, zeroLatilongPos, new Cesium.Cartesian3());
+
+                            var norCurCenterPos = Cesium.Cartesian3.normalize(curCenterPos, new Cesium.Cartesian3());
+
+                            //转为经纬度
+                            var ellipsoid = viewer.scene.globe.ellipsoid;
+
+                            var cartographicPosition = ellipsoid.cartesianToCartographic(norCurCenterPos);
+
+
+                            var curLong = Cesium.Math.toDegrees(cartographicPosition.longitude).toFixed(2);
+                            var curLat = Cesium.Math.toDegrees(cartographicPosition.latitude).toFixed(2);
+
+
+                            getPrimitiveByID(curPickedEleID).modelMatrix = eleRotateMatrix;
+
+                            //document.getElementById("txt").value = "\n " + curLong;
+
+                            //alert(typeof (curLong));
+                            moveEle(curPickedEleID, curLong, curLat);
+                        }
+                        else {
+                            moveEle(curPickedEleID, longitudeString, latitudeString);
+                        }
+
+                    }
+                }
+                
+                startRotate(getRotateModel());
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+            
+            //相机移动结束事件
+            camera.moveEnd.addEventListener(function () {
+                //SetSphereRotateMatrix();
+            });
+            
+
+            //相机发生变化事件
+            camera.changed.addEventListener(function () {
+                //SetSphereRotateMatrix();
+            });
+
+
+            //页面加载完毕事件
+            window.onload = function () {
+
+                //setCameraDestination(calLongOffset(getCurSceneModel().DefaultCamLong), 0, 0);
+
+                resetCamInitialMatrix();
+   
+                SetSphereRotateMatrix();
+
+                viewer.scene.postRender.addEventListener(function () {
+                    if (scene.mode == Cesium.SceneMode.SCENE3D)
+                        SetSphereRotateMatrix();
+                });
+
+                //bkResponse.IsShowLoading(false);
+            }
+
+            var resetCamInitialMatrix = function () {
+                camInitialMatrix = Cesium.Matrix4.clone(camera.inverseViewMatrix);
+            }
+
+
+            
+            var SetSphereRotateMatrix = function () {
+
+                //获取终点相机矩阵
+                let camCurMatrix = Cesium.Matrix4.clone(camera.viewMatrix);
+
+                //M2/camInitialMatrix = camCurMatrix*(camInitialMatrix逆矩阵）得到相机相对初始位置的旋转矩阵
+                let rotateMatrixCamera = Cesium.Matrix4.multiply(camInitialMatrix, camCurMatrix, new Cesium.Matrix4());
+
+                //由相机旋转矩阵的逆矩阵得到地球的旋转矩阵
+                let rotateMatEarth = Cesium.Matrix4.inverse(rotateMatrixCamera, new Cesium.Matrix4());
+
+                //var area = document.getElementById("txt");
+                //area.value = area.value + "\n cameram0:" + camInitialMatrix;
+                //area.value = area.value + "\n cameram2:" + camCurMatrix;
+                //area.value = area.value + "\n camera:" + rotateMatrixCamera;
+                //area.value = area.value + "\n earth:" + rotateMatEarth;
+
+                //document.getElementById("txt").value = rotateMatEarth + "\n \n" + document.getElementById("txt").value;
+
+                //右手坐标系转为左手坐标系
+                let matRight2Left = new Cesium.Matrix4(-1, 0, 0, 0,
+                                                        0, 1, 0, 0,
+                                                        0, 0, 1, 0,
+                                                        0, 0, 0, 1);
+                // = M左右* Mrotate* M左右
+                rotateMatEarth = Cesium.Matrix4.multiply(matRight2Left, rotateMatEarth, new Cesium.Matrix4());
+                rotateMatEarth = Cesium.Matrix4.multiply(rotateMatEarth, matRight2Left, new Cesium.Matrix4());
+                //area.value = area.value + "\n earth2:" + rotateMatEarth;
+
+                //let rotateMatrix3 = Cesium.Matrix4.getRotation(rotateMatEarth, new Cesium.Matrix3());
+                //let quaternion = Cesium.Quaternion.fromRotationMatrix(rotateMatrix3);
+
+                //bkResponse.SphereRotateByMatrix("{"+rotateMatEarth+"}");
+            }
+
+            
+            //拾取经纬度坐标实体
+            var pickEntity = viewer.entities.add({
+                label: {
+                    show: false,
+                    showBackground: true,
+                    font: '14px monospace',
+                    horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                    verticalOrigin: Cesium.VerticalOrigin.TOP,
+                    pixelOffset: new Cesium.Cartesian2(15, 0)
+                }
+            });
+
+            //3D球效果
+            var sphereTo3D = function () {
+                scene.mode = Cesium.SceneMode.SCENE3D;
+                //setCameraDestination(calLongOffset(getCurSceneModel().DefaultCamLong), 0, 1);
+            }
+
+
+            ////平面效果
+            var sphereTo2D = function () {
+                scene.mode = Cesium.SceneMode.SCENE2D;
+                //setCameraDestination(calLongOffset(getCurSceneModel().DefaultCamLong), 0, 1);
+            }
+
+
+            //更换底图
+            var changeBackgroundLayerImg = function (imgPath) {
+                layers.removeAll();
+                entities.removeById('bgVideo');
+
+                layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+                    url: imgPath//curScenePath + "/" + imgPath
+                }));
+            }
+
+
+            //设置相机视角
+            var setCameraDestination = function (long, lat, duration) {
+
+                var des;
+                if (scene.mode == Cesium.SceneMode.SCENE2D)
+                    des = 40000000;
+                else
+                    des = 18000000;
+
+                camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(long, lat, des),
+                    duration: duration
+                });
+
+                //camera.setView({
+                //    destination: Cesium.Cartesian3.fromDegrees(long, lat, 18000000),
+                //    orientation: {
+                //        heading: Cesium.Math.toRadians(0.0), //默认值
+                //        pitch: Cesium.Math.toRadians(-90.0), // 默认值
+                //        roll: 0.0 //默认值
+                //    }
+                //});
+            }
+
+            //更换底图为视频
+            var changeBackgroundLayerVideo = function (videoPath) {
+
+                layers.removeAll();
+                entities.removeById('bgVideo');
+                bgVideo.setAttribute('src', videoPath);//curScenePath + "/" + videoName);
+
+                entities.add({
+                    id: 'bgVideo',
+                    rectangle: {
+                        coordinates: Cesium.Rectangle.fromDegrees(-180.0, -90.0, 180.0, 90.0),
+                        material: bgVideo
+                    }
+                });
+
+                bgVideo.play();
+            }
+            
+            
+            //重新创建所有元素
+            var ReLoadAllEle = function (allEle) {
+     
+                delAllEle();
+               
+                for (var i = 0; i < allEle.length; i++) {
+     
+                    createEleCommand(allEle[i]);
+                }
+
+                resetEleLayer();
+            }
+
+
+            //后台调用该方法创建元素
+            var createEle = function (curEle) {
+
+                createEleCommand(curEle);
+
+                //如果是图片或者视频元素 重新计算元素层级
+                if (curEle.ElementType == 1 || curEle.ElementType == 2) {
+                    resetEleLayer();
+                }
+            }
+
+            var createEleCommand = function (curEle) {
+
+                if (curEle.ElementType == 1)//图片元素
+                {
+                    createPicEle(curEle);
+                    createCloseBtn(curEle);
+                    initEleIsShow(curEle.ElementID, curEle.IsShow);
+                }
+                else if (curEle.ElementType == 2) //视频元素
+                {
+                    createVideoEle(curEle);
+                    createCloseBtn(curEle);
+                    createVideoPlayBtn(curEle);
+                    initEleIsShow(curEle.ElementID, curEle.IsShow);
+                }
+                else if (curEle.ElementType == 3) //标签元素
+                {
+                    createImgLabelEle(curEle);
+                }
+                else if (curEle.ElementType == 4) //天气元素
+                {
+                    createWeatherEle(curEle);
+                }
+            }
+
+
+            //创建图文标签元素
+            var createImgLabelEle = function (curImgLabelEle) {
+
+                var oLabel = new Label();
+                oLabel.id = curImgLabelEle.ElementID;
+                oLabel.position = Cesium.Cartesian3.fromDegrees(curImgLabelEle.ElePrimitiveInfo.CurLongOffset, curImgLabelEle.ElePrimitiveInfo.Lat);
+                oLabel.text = curImgLabelEle.Text;
+                oLabel.fillColor = Cesium.Color.fromCssColorString(curImgLabelEle.FontColor);
+                oLabel.font = curImgLabelEle.FontSize + 'px Microsoft YaHei';
+                oLabel.pixelOffset = new Cesium.Cartesian2(22, 0);
+                oLabel.verticalOrigin = Cesium.VerticalOrigin.CENTER;
+                oLabel.show = curImgLabelEle.IsActive;
+
+                createLableEle(oLabel);
+
+                if (curImgLabelEle.Icon != "") {
+                    var oBillboard = new Billboard();
+                    oBillboard.id = curImgLabelEle.ElementID;
+                    oBillboard.width = 40;
+                    oBillboard.height = 40;
+                    oBillboard.position = Cesium.Cartesian3.fromDegrees(curImgLabelEle.ElePrimitiveInfo.CurLongOffset, curImgLabelEle.ElePrimitiveInfo.Lat);
+                    oBillboard.image = projectResourcePath + "/Sys_Labels/" + curImgLabelEle.Icon;
+                    oBillboard.show = curImgLabelEle.IsActive;
+
+                    createBillboardEle(oBillboard);
+                }
+            }
+
+
+            //创建天气元素
+            var createWeatherEle = function (curWeatherEle) {
+                var oLabel = new Label();
+
+                oLabel.id = curWeatherEle.ElementID;
+                oLabel.position = Cesium.Cartesian3.fromDegrees(calLongOffset(curWeatherEle.City.Long), curWeatherEle.City.Lat);
+                oLabel.text = curWeatherEle.City.CityName_CN;
+                oLabel.fillColor = Cesium.Color.fromCssColorString('#FFD700');
+                oLabel.outlineColor = Cesium.Color.fromCssColorString('#CFCFCF');
+                oLabel.outlineWidth = 0.2;
+                oLabel.font = '20px Microsoft YaHei';
+                oLabel.pixelOffset = new Cesium.Cartesian2(22, 0);
+                oLabel.style = Cesium.LabelStyle.FILL_AND_OUTLINE;
+                oLabel.verticalOrigin = Cesium.VerticalOrigin.BOTTOM;
+                oLabel.show = bkResponse.IsShowWeather();
+
+                createLableEle(oLabel);
+
+                var oBillboard = new Billboard();
+                oBillboard.id = curWeatherEle.ElementID;
+                oBillboard.width = 32;
+                oBillboard.height = 32;
+                oBillboard.position = Cesium.Cartesian3.fromDegrees(calLongOffset(curWeatherEle.City.Long), curWeatherEle.City.Lat);
+                oBillboard.show = bkResponse.IsShowWeather();
+                createBillboardEle(oBillboard);
+
+                requestWeather(curWeatherEle);
+            }
+
+
+            //元素点击事件处理
+            var eleClick = function (elementID) {
+
+                curPickedEleID = elementID;
+
+                if (elementID.indexOf('close_') != -1) {
+                    var idArr = elementID.split('_');
+                    showEle(idArr[1], false);
+                }
+                else if (elementID.indexOf('play_') != -1) {
+                    var idArr = elementID.split('_');
+                    playVideoEle(idArr[1]);
+
+                    //var videoPrimitiveUniforms = getPrimitiveByID("play_" + idArr[1]).appearance.material.uniforms;
+                    //var videoEle = document.getElementById("video_" + idArr[1]);
+
+                    //if (videoPrimitiveUniforms.image == projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png") {
+                    //    videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PlayBtnImg.png";
+                    //    videoEle.pause();
+                    //    bkResponse.PlayVideoEle(idArr[1], false);
+                    //}
+                    //else {
+                    //    videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png";
+                    //    videoEle.play();
+                    //    bkResponse.PlayVideoEle(idArr[1], true);
+                    //}
+                }
+                else {
+
+                    var curPickedEle = getEleByID(curPickedEleID);
+
+                    if (curPickedEle.ElementType == 1 || curPickedEle.ElementType == 2) {
+                        resetEleLayer();
+                    }
+                    else if (curPickedEle.ElementType == 3) {
+                        if (curPickedEle.RelSphereElementID != "") {
+
+                            showEle(curPickedEle.RelSphereElementID, true);
+
+                            moveEle(curPickedEle.RelSphereElementID,
+                                curPickedEle.ElePrimitiveInfo.CurLongOffset,
+                                curPickedEle.ElePrimitiveInfo.CurLat);
+                        }
+                    }
+                }
+            }
+
+            //var playAllVideoEle = function (flag) {
+
+            //    var eleArr = JSON.parse(bkResponse.GetPicAndVideoElementList());
+
+            //    var videoPrimitiveUniforms = getPrimitiveByID("play_" + elementID).appearance.material.uniforms;
+            //    var videoEle = document.getElementById("video_" + elementID);
+
+            //    for (var i = 0; i < eleArr.length; i++) {
+            //        if (eleArr[i].ElementType == "2") {
+            //            if (flag) {
+            //                videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png";
+            //                videoEle.play();
+            //            }
+            //            else {
+            //                videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PlayBtnImg.png";
+            //                videoEle.pause();
+            //                bkResponse.PlayVideoEle(elementID, false);
+            //            }
+            //        }
+            //    }
+            //}
+
+
+            var playVideoEle = function (elementID) {
+
+                var videoPrimitiveUniforms = getPrimitiveByID("play_" + elementID).appearance.material.uniforms;
+                var videoEle = document.getElementById("video_" + elementID);
+
+                if (videoPrimitiveUniforms.image == projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png") {
+                    videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PlayBtnImg.png";
+                    videoEle.pause();
+                    bkResponse.PlayVideoEle(elementID, false);
+                }
+                else {
+                    videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png";
+                    videoEle.play();
+                    bkResponse.PlayVideoEle(elementID, true);
+                }
+            }
+
+            //激活、不激活一个元素
+            var activeEle = function (ele, flag) {
+
+                if (ele.ElementType == 1 || ele.ElementType == 2)//图片 视频元素
+                {
+                    var elePrimitive = getPrimitiveByID(ele.ElementID);
+                    var eleCloseBtnPrimitive = getPrimitiveByID('close_' + ele.ElementID);
+                    var elePlayBtnPrimitive = getPrimitiveByID('play_' + ele.ElementID);
+
+                    if (flag) {
+                        elePrimitive.show = ele.IsShow;
+                        if (elePlayBtnPrimitive != null)
+                            elePlayBtnPrimitive.show = ele.IsShow;
+                        if (ele.IsShow)
+                            eleCloseBtnPrimitive.show = ele.CanClose;
+                    }
+                    else {
+                        elePrimitive.show = flag;
+                        eleCloseBtnPrimitive.show = flag;
+                        if (elePlayBtnPrimitive != null)
+                            elePlayBtnPrimitive.show = flag;
+                    }
+                }
+                else if (ele.ElementType == 3) //标签元素
+                {
+                    getLabelByID(ele.ElementID).show = flag;
+                    getBillboardByID(ele.ElementID).show = flag;
+                }
+                else if (ele.ElementType == 4) //天气元素
+                {
+                    getLabelByID(ele.ElementID).show = flag;
+                    getBillboardByID(ele.ElementID).show = flag;
+                }
+            }
+
+
+            //打开、关闭一个图片、视频元素
+            var showEle = function (elementID, flag) {
+
+                //var ele = getEleByID(elementID);
+
+                initEleIsShow(elementID, flag);
+
+                bkResponse.UpdateEleIsShow(elementID,flag);
+           
+            }
+
+            //打开、关闭关联元素
+            var showRelEle = function (elementID, relElementID, flag) {
+
+                //var ele = getEleByID(relElementID);
+
+                initEleIsShow(elementID, flag);
+
+                bkResponse.UpdateRelEleIsShow(elementID, relElementID, flag);
+
+            }
+           
+
+            //初始化元素时是否显示
+            var initEleIsShow = function (elementID, flag) {
+
+                var ele = getEleByID(elementID)
+
+                if (ele == null)
+                    return;
+
+                if (ele.ElementType == 1 || ele.ElementType == 2)//图片 视频元素
+                {
+                    var elePrimitive = getPrimitiveByID(ele.ElementID);
+                    var eleCloseBtnPrimitive = getPrimitiveByID('close_' + ele.ElementID);
+                    var elePlayBtnPrimitive = getPrimitiveByID('play_' + ele.ElementID);
+
+                    if (flag) {
+                        if (ele.IsActive) {
+                            elePrimitive.show = flag;
+                            eleCloseBtnPrimitive.show = ele.CanClose
+                            if (elePlayBtnPrimitive != null)
+                                elePlayBtnPrimitive.show = flag;
+                        }
+                        else {
+                            elePrimitive.show = ele.IsActive;
+                            eleCloseBtnPrimitive.show = ele.IsActive;
+                            if (elePlayBtnPrimitive != null)
+                                elePlayBtnPrimitive.show = ele.IsActive;
+                        }
+                    }
+                    else {
+                        elePrimitive.show = flag;
+                        eleCloseBtnPrimitive.show = flag;
+                        if (elePlayBtnPrimitive != null)
+                            elePlayBtnPrimitive.show = flag;
+                    }
+                }
+            }
+
+
+
+            //创建图片元素
+            var createPicEle = function (curPicEle) {
+
+                var imgArr = curPicEle.ListPicName;
+                var material = Cesium.Material.fromType('Image');
+                material.uniforms.image = curScenePath + "/" + curPicEle.ElementID + '/' + imgArr[0];
+                material.uniforms.repeat = new Cesium.Cartesian2(1.0, 1.0);
+
+                var recRegionArr = calRectangleRegion(curPicEle.ElePrimitiveInfo.Width, curPicEle.ElePrimitiveInfo.Height);
+     
+                createElePrimitive(curPicEle.ElementID,recRegionArr[0], recRegionArr[1], recRegionArr[2], recRegionArr[3], material);
+
+                //if (curPicEle.IsActive)
+                //    elePrimitive.show = curPicEle.ElePrimitiveInfo.CanClose;
+                //else
+                //    elePrimitive.show = curPicEle.IsActive;
+
+                //多张图片播放控制
+                if (imgArr.length > 1) {
+                    var index = 0;
+                    $('body').everyTime(curPicEle.SwitchSecs+'s', 'timer_' + curPicEle.ElementID, function () {
+                        if (playFlag) {
+                            if (curPicEle.PlayWay) {
+                                var num = Math.floor(imgArr.length * Math.random());
+                                material.uniforms.image = curScenePath + "/" + curPicEle.ElementID + '/' + imgArr[num];
+                            }
+                            else {
+                                if (index < imgArr.length-1) {
+                                    index++;
+                                }
+                                else {
+                                    index = 0;
+                                }
+                                material.uniforms.image = curScenePath + "/" + curPicEle.ElementID + '/' + imgArr[index];
+                            }
+                        }
+                    });
+                }
+
+                //return elePrimitive;
+            }
+
+            //创建视频元素
+            var createVideoEle = function (curVideoEle) {
+
+                var videoPath = curScenePath + "/" + curVideoEle.ElementID + '/' + curVideoEle.VideoName;
+
+                //var videoElement = document.createElement('video');
+
+                //var videoDiv = $('<div/>');  
+                //videoDiv.attr('id', 'videoDiv_' + curVideoEle.ElementID);
+                //videoDiv.appendTo('body');
+                //videoDiv.append(videoElement);
+
+                //videoElement.id = 'video_' + curVideoEle.ElementID;
+                //videoElement.src = videoPath;
+                //videoElement.loop = true;
+                //videoElement.muted = true;
+
+                //videoElement.type = "video/mp4";
+                //alert(videoElement.type);
+
+                //var videoDiv = document.getElementById("videoDiv"); //document.createElement('div');
+                //videoDiv.innerHTML = "<div id=\"video\" src=\"" + videoPath + "\"></div>";
+
+                var videoDiv = document.createElement("div");
+
+                videoDiv.innerHTML = "<video id = \"video_" + curVideoEle.ElementID + "\"  src=\"" + videoPath + "\" muted loop></video>";
+
+                document.getElementsByTagName("body")[0].appendChild(videoDiv);
+
+                //document.getElementById("txtValue").value = document.getElementById("videoDiv").innerHTML;
+
+                var videoElement = document.getElementById("video_" + curVideoEle.ElementID);
+
+                //if (playFlag)
+                videoElement.play();
+
+                var material = Cesium.Material.fromType('Image');
+                material.uniforms.image = videoElement;//document.getElementById("trailer");//videoElement;
+                material.uniforms.repeat = new Cesium.Cartesian2(1.0, 1.0);
+
+                var recRegionArr = calRectangleRegion(curVideoEle.ElePrimitiveInfo.Width, curVideoEle.ElePrimitiveInfo.Height);
+
+                createElePrimitive(curVideoEle.ElementID, recRegionArr[0], recRegionArr[1], recRegionArr[2], recRegionArr[3], material);
+
+                //document.getElementById("txt").value = videoElement.src;
+                //if (curVideoEle.IsActive)
+                //    elePrimitive.show = curVideoEle.ElePrimitiveInfo.CanClose;
+                //else
+                //    elePrimitive.show = curVideoEle.IsActive;
+
+                //return elePrimitive;
+            }
+
+
+            var labels = scene.primitives.add(new Cesium.LabelCollection());
+            //创建标签元素
+            var createLableEle = function (oLabel) {
+
+                let instance = labels.add({
+                    backgroundColor: oLabel.backgroundColor,
+                    backgroundPadding: oLabel.backgroundPadding,
+                    disableDepthTestDistance: oLabel.disableDepthTestDistance,
+                    distanceDisplayCondition: oLabel.distanceDisplayCondition,
+                    eyeOffset: oLabel.eyeOffset,
+                    fillColor: oLabel.fillColor,
+                    font: oLabel.font,
+                    heightReference: oLabel.heightReference,
+                    horizontalOrigin: oLabel.horizontalOrigin,
+                    id: oLabel.id,
+                    outlineColor: oLabel.outlineColor,
+                    outlineWidth: oLabel.outlineWidth,
+                    pixelOffset: oLabel.pixelOffset,
+                    position: oLabel.position,
+                    scale: oLabel.scale,
+                    scaleByDistance: oLabel.scaleByDistance,
+                    show: oLabel.show,
+                    showBackground: oLabel.showBackground,
+                    style: oLabel.style,
+                    text: oLabel.text,
+                    translucencyByDistance: oLabel.translucencyByDistance,
+                    verticalOrigin: oLabel.verticalOrigin
+                });
+            }
+
+
+
+            var billboards = scene.primitives.add(new Cesium.BillboardCollection());
+            //创建billboard元素
+            var createBillboardEle = function (oBillboard) {
+
+                let instance = billboards.add({
+                    alignedAxis: oBillboard.alignedAxis,
+                    color: oBillboard.color,
+                    disableDepthTestDistance: oBillboard.disableDepthTestDistance,
+                    distanceDisplayCondition: oBillboard.distanceDisplayCondition,
+                    eyeOffset: oBillboard.eyeOffset,
+                    width: oBillboard.width,
+                    height: oBillboard.height,
+                    heightReference: oBillboard.heightReference,
+                    horizontalOrigin: oBillboard.horizontalOrigin,
+                    id: oBillboard.id,
+                    image: oBillboard.image,
+                    pixelOffset: oBillboard.pixelOffset,
+                    pixelOffsetScaleByDistance: oBillboard.pixelOffsetScaleByDistance,
+                    position: oBillboard.position,
+                    rotation: oBillboard.rotation,
+                    scale: oBillboard.scale,
+                    scaleByDistance: oBillboard.scaleByDistance,
+                    show: oBillboard.show,
+                    sizeInMeters: oBillboard.sizeInMeters,
+                    translucencyByDistance: oBillboard.translucencyByDistance,
+                    verticalOrigin: oBillboard.verticalOrigin
+                });
+            }
+
+           
+            //计算元素的位置
+            var calRectangleRegion = function (width,height) {
+                var west, south, east, north;
+
+                var recRegionArr = new Array();
+
+                west = -(width / 2);
+                south = -(height / 2);
+
+                east = width / 2;
+                north = height / 2;
+
+                recRegionArr.push(Math.round(west));
+                recRegionArr.push(Math.round(south));
+                recRegionArr.push(Math.round(east));
+                recRegionArr.push(Math.round(north));
+
+                return recRegionArr;
+            }
+
+            //创建元素的Primitive
+            var createElePrimitive = function (id, west, south, east, north, material) {
+
+                //var west, south, east, north;
+
+
+                //west = -(width / 2);
+                //south = -(height / 2);
+
+                //east = width / 2;
+                //north = height / 2;
+
+                //var modelMatrix = calEleRotateMatrix(long, lat, 100000);
+
+                let instance = new Cesium.GeometryInstance({
+                    id: id,
+                    geometry: new Cesium.RectangleGeometry({
+                        rectangle: Cesium.Rectangle.fromDegrees(west, south, east, north),
+                        vertexFormat: Cesium.MaterialAppearance.MaterialSupport.TEXTURED.vertexFormat
+                    }),
+                });
+
+
+                var elePrimitive = new Cesium.Primitive({
+                    geometryInstances: instance,
+                    appearance: new Cesium.MaterialAppearance({
+                        material: material
+                    }),
+
+                    releaseGeometryInstances: false,
+                    show: true,
+                    //modelMatrix: modelMatrix
+                });
+
+                scene.primitives.add(elePrimitive);
+
+                //setCameraDestination(long, lat, 1);
+
+                //return elePrimitive;
+
+            }
+
+            
+            //创建关闭图标
+            var createCloseBtn = function (curEle) {
+
+                var material = Cesium.Material.fromType('Image');
+                material.uniforms.image = projectResourcePath + "/Sys_BtnClose/" + curEle.CloseBtnPrimitiveInfo.IconName;
+                material.uniforms.repeat = new Cesium.Cartesian2(1.0, 1.0);
+
+                var recRegionArr = calCloseBtnRegion(curEle);
+
+                var elePrimitive = createElePrimitive('close_' + curEle.ElementID , recRegionArr[0], recRegionArr[1], recRegionArr[2], recRegionArr[3], material);
+
+                //return elePrimitive;
+                //alert(curEle.CanClose);
+                //if (curEle.IsActive)
+                //elePrimitive.show = curEle.CanClose;
+                //else
+                //    elePrimitive.show = curEle.IsActive;
+
+                //curEle.CloseBtnPrimitiveInfo.PrimitiveObj = elePrimitive;
+            }
+
+            //创建视频播放暂停图片
+            var createVideoPlayBtn = function (curEle) {
+
+                var material = Cesium.Material.fromType('Image');
+                material.uniforms.image = projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png";
+                material.uniforms.repeat = new Cesium.Cartesian2(1.0, 1.0);
+
+                var west, south, east, north;
+                west = -2;
+                south = -2;
+                east = 2;
+                north = 2;
+
+                var elePrimitive = createElePrimitive('play_' + curEle.ElementID, west, south, east, north, material);
+            }
+            
+
+           //计算关闭按钮位置
+            var calCloseBtnRegion = function (curEle) {
+                var recRegionArr = new Array();
+                var west, south, east, north;
+
+                //上左
+                if (curEle.CloseBtnPrimitiveInfo.CloseBtnAlign == 0) {
+                    west = (-(curEle.ElePrimitiveInfo.Width / 2) - curEle.CloseBtnPrimitiveInfo.Width);
+                    south = (curEle.ElePrimitiveInfo.Height / 2);
+                    east = -(curEle.ElePrimitiveInfo.Width / 2);
+                    north = south + curEle.CloseBtnPrimitiveInfo.Height;
+                }
+                else if (curEle.CloseBtnPrimitiveInfo.CloseBtnAlign == 1)//上右
+                {
+                    west = (curEle.ElePrimitiveInfo.Width / 2);
+                    south = (curEle.ElePrimitiveInfo.Height / 2);
+                    east = west + curEle.CloseBtnPrimitiveInfo.Width;
+                    north = south + curEle.CloseBtnPrimitiveInfo.Height;
+                }
+                else if (curEle.CloseBtnPrimitiveInfo.CloseBtnAlign == 2)//下左
+                {
+                    west = (-(curEle.ElePrimitiveInfo.Width / 2) - curEle.CloseBtnPrimitiveInfo.Width);
+                    south = (-(curEle.ElePrimitiveInfo.Height / 2) - curEle.CloseBtnPrimitiveInfo.Height);
+                    east = -(curEle.ElePrimitiveInfo.Width / 2);
+                    north = -(curEle.ElePrimitiveInfo.Height / 2);
+                }
+                else if (curEle.CloseBtnPrimitiveInfo.CloseBtnAlign == 3)//下右
+                {
+                    west = (curEle.ElePrimitiveInfo.Width / 2);
+                    south = (-(curEle.ElePrimitiveInfo.Height / 2) - curEle.CloseBtnPrimitiveInfo.Height);
+                    east = west + curEle.CloseBtnPrimitiveInfo.Width;
+                    north = -(curEle.ElePrimitiveInfo.Height / 2);
+                }
+
+                west = west - 2;
+                south = south - 2;
+                east = east + 2;
+                north = north + 2;
+
+                recRegionArr.push(west);
+                recRegionArr.push(south);
+                recRegionArr.push(east);
+                recRegionArr.push(north);
+
+                return recRegionArr;
+            }
+
+           
+            
+            //移动元素
+            var moveEle = function (elementID, curLong, curLat) {
+       
+                var ele = getEleByID(elementID)
+
+                if (ele == null)
+                    return;
+
+                if (ele.CanMove) {
+                    //更新前台
+                    ele.ElePrimitiveInfo.CurLong = curLong;
+                    ele.ElePrimitiveInfo.CurLat = curLat;
+                    ele.ElePrimitiveInfo.CurLongOffset = curLong;
+
+                    //alert(curLong);
+
+                    //将元素旋转到新的位置
+                    setEleRotateMatrix(ele);
+
+                    //更新后台
+                    bkResponse.UpdateEleCurLonAndLat(ele.ElementID, parseFloat(curLong), parseFloat(curLat));
+                }
+            }
+
+
+
+
+
+            //重置所有元素的层级
+            var resetEleLayer = function () {
+
+                var eleArr = JSON.parse(bkResponse.GetPicAndVideoElementList());
+
+                for (var i = 0; i < eleArr.length; i++) {
+
+                    var elePrimitive = getPrimitiveByID(eleArr[i].ElementID);
+                    var eleCloseBtnPrimitive = getPrimitiveByID('close_' + eleArr[i].ElementID);
+                    var elePlayBtnPrimitive = getPrimitiveByID('play_' + eleArr[i].ElementID);
+
+                    var layerIndex = 0;
+
+                    if (curPickedEleID != null && curPickedEleID == eleArr[i].ElementID) {
+
+                        layerIndex = (eleArr.length + 1) * 5000;
+
+                        scene.primitives.raiseToTop(elePrimitive);
+                        scene.primitives.raiseToTop(eleCloseBtnPrimitive);
+                        if (elePlayBtnPrimitive != null)
+                            scene.primitives.raiseToTop(elePlayBtnPrimitive);
+                    }
+                    else {
+                        layerIndex = (i + 1) * 3500;
+                        scene.primitives.lower(elePrimitive);
+                        scene.primitives.raiseToTop(eleCloseBtnPrimitive);
+                        if (elePlayBtnPrimitive != null)
+                            scene.primitives.raiseToTop(elePlayBtnPrimitive);
+                    }
+
+                    eleArr[i].ElePrimitiveInfo.LayerIndex = layerIndex + 2000;
+                    eleArr[i].CloseBtnPrimitiveInfo.LayerIndex = layerIndex + 3000;
+
+                    bkResponse.UpdateEleLayerIndex(eleArr[i].ElementID, eleArr[i].ElePrimitiveInfo.LayerIndex, eleArr[i].CloseBtnPrimitiveInfo.LayerIndex);
+
+                    setEleRotateMatrix(eleArr[i]);
+                }
+            }
+
+
+
+            //设置单个元素的旋转矩阵
+            var setEleRotateMatrix = function (ele) {
+
+                var elePrimitive = getPrimitiveByID(ele.ElementID);
+                var eleCloseBtnPrimitive = getPrimitiveByID('close_' + ele.ElementID);
+                var elePlayBtnPrimitive = getPrimitiveByID('play_' + ele.ElementID);
+
+                if (elePrimitive != null)
+                    elePrimitive.modelMatrix = calEleRotateMatrix(ele.ElePrimitiveInfo.CurLongOffset, ele.ElePrimitiveInfo.CurLat, ele.ElePrimitiveInfo.LayerIndex);
+                if (eleCloseBtnPrimitive != null)
+                    eleCloseBtnPrimitive.modelMatrix = calEleRotateMatrix(ele.ElePrimitiveInfo.CurLongOffset, ele.ElePrimitiveInfo.CurLat, ele.CloseBtnPrimitiveInfo.LayerIndex);
+                if (elePlayBtnPrimitive != null)
+                    elePlayBtnPrimitive.modelMatrix = calEleRotateMatrix(ele.ElePrimitiveInfo.CurLongOffset, ele.ElePrimitiveInfo.CurLat, ele.ElePrimitiveInfo.LayerIndex + 4000);
+            }
+
+    
+            //计算元素的旋转矩阵
+            var calEleRotateMatrix = function (lon, lat, layerIndex) {
+
+                //alert(lon);
+                //lon = calLongOffset(lon);
+
+                //document.getElementById("txt").value = "\n " + lon;
+
+                var modelMatrix = Cesium.Matrix4.IDENTITY;
+                if (scene.mode == Cesium.SceneMode.SCENE3D) {
+
+                    let rotateZ = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(lon));
+                    let rotateX = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(0 - lat));
+
+                    modelMatrix = Cesium.Matrix4.IDENTITY;
+                    modelMatrix = Cesium.Matrix4.multiplyByMatrix3(modelMatrix, rotateZ, new Cesium.Cartesian4());
+                    modelMatrix = Cesium.Matrix4.multiplyByMatrix3(modelMatrix, rotateX, new Cesium.Cartesian4());
+
+                    //var translation = Cesium.Cartesian3.fromArray([layerIndex, layerIndex, layerIndex]);
+                    var translation = Cesium.Cartesian3.fromArray([layerIndex, 0, 0]);
+                    modelMatrix = Cesium.Matrix4.multiplyByTranslation(modelMatrix, translation, new Cesium.Cartesian4());
+
+                } else if (scene.mode == Cesium.SceneMode.SCENE2D) {
+
+                    let r = 6378137;
+                    //var modelMatrix = item.modelMatrix;
+                    var translation = Cesium.Cartesian3.fromArray([layerIndex, Cesium.Math.toRadians(lon) * r, Cesium.Math.toRadians(lat) * r]);
+                    modelMatrix = Cesium.Matrix4.multiplyByTranslation(modelMatrix, translation, new Cesium.Cartesian4());
+
+                }
+
+                return modelMatrix;
+            }
+
+            //根据元素ID获取元素
+            var getEleByID = function (elementID) {
+
+                if (elementID == null || elementID == undefined || elementID == "")
+                    return null;
+
+                var eleJson = bkResponse.GetEleByID(elementID);
+
+                if (eleJson != "")
+                    return JSON.parse(eleJson);
+
+                return null;
+            }
+
+
+            ////获取当前CurSceneModel
+            //var getCurSceneModel = function () {
+            //    alert("a");
+            //    //return JSON.parse(bkResponse.CurSceneModel());
+            //}
+
+            //根据元素ID获取Label
+            var getLabelByID = function (elementID) {
+
+                var label = null;
+
+                for (i = 0; i < labels.length; i++) {
+                    if (labels.get(i).id == elementID) {
+                        label = labels.get(i);
+                        break;
+                    }
+                }
+                return label;
+            }
+
+
+            //根据元素ID获取billboard
+            var getBillboardByID = function (elementID) {
+
+                var billboard = null;
+
+                for (i = 0; i < billboards.length; i++) {
+                    if (billboards.get(i).id == elementID) {
+                        billboard = billboards.get(i);
+                        break;
+                    }
+                }
+                return billboard;
+            }
+            
+
+            //请求天气
+            var requestWeather = function (weatherEle) {
+
+                $.ajax({
+                    type: "post",
+                    //dataType: "json",
+                    url: "https://query.yahooapis.com/v1/public/yql?" +
+                        "q=select item.condition from weather.forecast where woeid in (select woeid from geo.places(1) where text='" + weatherEle.City.CityName_EN + "')"
+                        + "&u=c"
+                        + "&format=json",
+                    success: function (data) {
+                        if (data != "") {
+                            var weatherInfo = data.query.results.channel.item.condition;
+                            updateWeather(weatherEle, weatherInfo);
+                        }
+                    },
+                    error: function () {
+                        //alert("天气加载错误。");
+                    }
+                });
+            }
+
+            
+
+            //更新天气数据
+            var updateWeather = function (weatherEle, weatherInfo) {
+
+                var label = getLabelByID(weatherEle.ElementID);
+                var billboard = getBillboardByID(weatherEle.ElementID);
+                if (label == null||billboard==null)
+                    return;
+
+                var tmp = parseInt(5 / 9 * (weatherInfo.temp - 32));
+  
+                label.text = weatherEle.City.CityName_CN + " " + tmp + '℃';
+                billboard.image = projectResourcePath + '/Sys_Weather/' + weatherInfo.code + '.png';
+
+                bkResponse.UpdateWeather(weatherEle.ElementID, weatherInfo.code, tmp);
+            }
+
+            var stopAllVideoEle = function () {
+
+                var eleArr = JSON.parse(bkResponse.GetPicAndVideoElementList());
+
+                for (var i = 0; i < eleArr.length; i++) {
+                    if (eleArr[i].ElementType == 2) {
+                        var videoEle = document.getElementById("video_" + eleArr[i].ElementID);
+                        videoEle.currentTime = 0;
+                        videoEle.pause();
+                    }
+                }
+            }
+
+            var playAllVideoEle = function (flag) {
+
+            	var eleArr = JSON.parse(bkResponse.GetPicAndVideoElementList());
+
+            	playFlag = flag;
+
+            	for (var i = 0; i < eleArr.length; i++) {
+            		if (eleArr[i].ElementType == 2) {
+
+            			var videoPrimitiveUniforms = getPrimitiveByID("play_" + eleArr[i].ElementID).appearance.material.uniforms;
+            			var videoEle = document.getElementById("video_" + eleArr[i].ElementID);
+
+            			if (flag) {
+            				videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PauseBtnImg.png";
+            				videoEle.play();
+            			}
+            			else {
+            				videoPrimitiveUniforms.image = projectResourcePath + "/Sys_BtnPlay/PlayBtnImg.png";
+            				videoEle.pause();
+            			}
+            		}
+            	}
+
+				//播放、暂停背景视频
+            	var bgVideo = document.getElementById("bgVideo");
+            	if (flag)
+            		bgVideo.play();
+            	else
+            		bgVideo.pause();
+
+            }
+
+           
+           
+            //删除所有元素
+            var delAllEle = function () {
+                var eleArr = JSON.parse(bkResponse.GetAllElementList());
+                for (var i = 0; i < eleArr.length; i++) {
+                    delEle(eleArr[i]);
+                }
+            }
+
+            
+            //删除一个元素
+            var delEle = function (ele) {
+
+                if (ele.ElementType == 1)//图片元素
+                {
+                    delPrimitiveByID(ele.ElementID);
+                    delPrimitiveByID('close_' + ele.ElementID);
+                    $('body').stopTime('timer_' + ele.ElementID);
+
+                }
+                else if (ele.ElementType == 2) //视频元素
+                {
+                    delPrimitiveByID(ele.ElementID);
+                    delPrimitiveByID('close_' + ele.ElementID);
+                    delPrimitiveByID('play_' + ele.ElementID);
+                    var videoEle = document.getElementById("video_" + ele.ElementID);
+                    if (videoEle != null) {
+                        videoEle.remove(videoEle.selectedIndex);
+                    }
+                }
+                else if (ele.ElementType == 3) //标签元素
+                {
+                    var label = getLabelByID(ele.ElementID);
+                    var billboard = getBillboardByID(ele.ElementID);
+                    if (label != null)
+                        labels.remove(label);
+                    if (billboard != null)
+                        billboards.remove(billboard);
+                }
+                else if (ele.ElementType == 4) //天气元素
+                {
+                    var label = getLabelByID(ele.ElementID);
+                    var billboard = getBillboardByID(ele.ElementID);
+                    if (label != null)
+                        labels.remove(label);
+                    if (billboard != null)
+                        billboards.remove(billboard);
+                }
+            }
+
+            
+
+            var layer;
+            layui.use('layer', function () {
+                layer = layui.layer;
+            });
+
+            //是否为经纬度拾取模式
+            var pickingMode = false;
+         
+
+            //结束经纬度拾取
+            var stopPickingLongAndLat = function () {
+                pickingMode = false;
+                layer.close(pickingWinIndex);
+            }
+            
+            var pickingWinIndex = null;
+
+            //经纬度拾取方法
+            var startPickingLongAndLat = function () {
+
+                pickingMode = true;
+
+                pickingWinIndex = layer.open({
+                    type: 1,
+                    title: '选择经纬度',
+                    content: $('#divGetLongAndLat'),
+                    btn: ['使用该经纬度', '退出']
+                    , yes: function (index, layero) { },
+                    area: ['260px'],
+                    anim: 2,
+                    offset: 'l',
+                    shade: false,
+                    btnAlign: 'c',
+                    yes: function () {
+
+                        //经纬度拾取调用后台方法
+                        var lon = $('#txtPickLong').val();
+                        var lat = $('#txtPickLat').val();
+ 
+                        bkResponse.PickingLongAndLat(lon, lat, true);
+                        stopPickingLongAndLat();
+
+                    },
+                    btn2: function () {
+                        bkResponse.PickingLongAndLat('0', '0', false);
+                        stopPickingLongAndLat();
+                    },
+                    cancel: function () {
+                        bkResponse.PickingLongAndLat('0', '0', false);
+                        stopPickingLongAndLat();
+                    }
+                });
+            }
+            
+            var delPrimitiveByID = function (id) {
+
+                for (var i = 0; i < scene.primitives.length; i++) {
+                    if (typeof (scene.primitives.get(i).geometryInstances) != "undefined") {
+                        if (scene.primitives.get(i).geometryInstances.id == id) {
+                            scene.primitives.remove(scene.primitives.get(i));
+                            break;
+                        }
+                    }
+                }
+            }
+
+
+            var getPrimitiveByID = function (id) {
+
+                var primitive = null;
+
+                for (var i = 0; i < scene.primitives.length; i++) {
+                    if (typeof (scene.primitives.get(i).geometryInstances) != "undefined") {
+                        if (scene.primitives.get(i).geometryInstances.id == id) {
+                            primitive = scene.primitives.get(i);
+                            break;
+                        }
+                    }
+                }
+
+                return primitive;
+            }
+
+           
+            /*
+           //复位
+            var rotateReset = function () {
+                setCameraDestination(getCurSceneModel().DefaultCamLong, 0, 1);
+            }
+
+            //自动旋转
+            var autoRotate = function (flag) {
+                
+                $('body').stopTime('timer_rotation');
+
+                if (flag && scene.mode == Cesium.SceneMode.SCENE3D) {
+                    $('body').everyTime(0.04 + 's', 'timer_rotation', function () {
+                        viewer.camera.rotateLeft(Cesium.Math.toDegrees(0.0002)); 
+                    });
+                }
+               
+            }*/
+
+            function Label() {
+
+                var oLabel = new Object();
+
+                oLabel.backgroundColor = new Cesium.Color(0.165, 0.165, 0.165, 0.8);
+                oLabel.backgroundPadding = new Cesium.Cartesian2(7, 5);
+                oLabel.disableDepthTestDistance = 0.0;
+                oLabel.distanceDisplayCondition = undefined;
+                oLabel.eyeOffset = Cesium.Cartesian3.ZERO;
+                oLabel.fillColor = Cesium.Color.WHITE;
+                oLabel.font = '30px sans-serif';
+                oLabel.heightReference = Cesium.HeightReference.NONE;
+                oLabel.horizontalOrigin = Cesium.HorizontalOrigin.LEFT;
+                oLabel.id = '';
+                oLabel.outlineColor = Cesium.Color.BLACK;
+                oLabel.outlineWidth = 1.0;
+                oLabel.pixelOffset = Cesium.Cartesian2.ZERO;
+                oLabel.position = Cesium.Cartesian3.ZERO;
+                oLabel.scale = 1.0;
+                oLabel.scaleByDistance = undefined;
+                oLabel.show = true;
+                oLabel.showBackground = false;
+                oLabel.style = Cesium.LabelStyle.FILL;
+                oLabel.text = '';
+                oLabel.translucencyByDistance = undefined;
+                oLabel.verticalOrigin = Cesium.VerticalOrigin.BASELINE;
+
+                return oLabel;
+            }
+
+            function Billboard() {
+
+                var oBillboard = new Object();
+
+                oBillboard.alignedAxis = Cesium.Cartesian3.ZERO;
+                oBillboard.color = undefined;
+                oBillboard.disableDepthTestDistance = 0.0;
+                oBillboard.distanceDisplayCondition = undefined;
+                oBillboard.eyeOffset = Cesium.Cartesian3.ZERO;
+                oBillboard.width = 0;
+                oBillboard.height = 0;
+                oBillboard.heightReference = Cesium.HeightReference.NONE;
+                oBillboard.horizontalOrigin = undefined;
+                oBillboard.id = '';
+                oBillboard.image = '';
+                oBillboard.pixelOffset = Cesium.Cartesian2.ZERO;
+                oBillboard.pixelOffsetScaleByDistance = undefined;
+                oBillboard.position = Cesium.Cartesian3.ZERO;
+                oBillboard.rotation = 0.0;
+                oBillboard.scale = 1.0;
+                oBillboard.scaleByDistance = undefined;
+                oBillboard.show = true;
+                oBillboard.sizeInMeters = false;
+                oBillboard.translucencyByDistance = undefined;
+                oBillboard.verticalOrigin = undefined;
+                return oBillboard;
+            }
+
+
+            //var eleContorlIndex = null;
+
+            ////显示元素控制面板
+            //var openEleContorl = function () {
+
+            //    eleContorlIndex = layer.open({
+            //        type: 1,
+            //        title: '元素控制',
+            //        content: $('#divEleContorl'),
+            //        area: ['260px'],
+            //        anim: 2,
+            //        offset: 'l',
+            //        shade: false,
+            //        btnAlign: 'c',
+            //        cancel: function () {
+            //            layer.close(eleContorlIndex);
+            //        }
+            //    });
+            //}
+
+
+
+            //旋转控制部分
+            //let rotateWay = 2;// 0--x 1--y 2--z 3--地轴
+
+            let rotateTimer;
+            //let maxSpeed = 10;
+            //let minSpeed = -10;
+            let speedStep = 10;
+            let rotateSpeed = 1;
+
+            var startRotate = function (rotateAxis) {
+                if (scene.mode == Cesium.SceneMode.SCENE3D) {
+
+                    //rotateReset();
+
+                    initRotateAxis(rotateAxis);
+
+                    clearInterval(rotateTimer);
+
+                    //自转
+                    rotateTimer = setInterval(function () {
+
+                        if (rotateAxis.IsEarthAxis) //地轴
+                            camera.rotate(Cesium.Cartesian3.UNIT_Z, defaultRotateAmount * rotateSpeed);
+                        else  //自定义轴
+                            camera.rotate(camera.constrainedAxis, defaultRotateAmount * rotateSpeed);
+
+                    }, speedStep);
+                }
+            }
+
+            var stopRotate = function () {
+                clearInterval(rotateTimer);
+            }
+
+            //var accelerated = function () {
+            //    if (rotateSpeed + speedStep < maxSpeed) {
+            //        rotateSpeed = rotateSpeed + speedStep;
+            //        stopRotate();
+            //        startRotate();
+            //    }
+            //}
+
+            //var deceleration = function () {
+            //    if (rotateSpeed - speedStep > minSpeed) {
+            //        rotateSpeed = rotateSpeed - speedStep;
+            //        stopRotate();
+            //        startRotate();
+            //    }
+            //}
+
+            //旋转轴
+            /*
+            var refreshRotateAxis = function () {
+
+                if (0 == rotateWay || 1 == rotateWay || 2 == rotateWay)//x,y,z轴
+                {
+                    camera.flyTo({
+                        destination: camera.position,
+                        orientation: {
+                            heading: 0,
+                            pitch: Cesium.Math.toRadians(-90.0),
+                            roll: 0.0
+                        },
+                        duration: 0.0
+                    });
+
+                    camera.constrainedAxis = null;
+                }
+                else if (3 == rotateWay)//地轴
+                {
+                    camera.flyTo({
+                        destination: camera.position,
+                        orientation: {
+                            heading: Cesium.Math.toRadians(-23.0),
+                            pitch: Cesium.Math.toRadians(-90.0),
+                            roll: 0.0
+                        },
+                        duration: 0.0
+                    });
+
+                    camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
+                }
+            }
+
+            var rotateX = function () {
+                rotateWay = 0;
+                refreshRotateAxis();
+            }
+
+
+            var rotateY = function () {
+                rotateWay = 1;
+                refreshRotateAxis();
+            }
+
+
+            var rotateZ = function () {
+                rotateWay = 2;
+                refreshRotateAxis();
+            }
+
+            var rotateEarthAxis = function () {
+                rotateWay = 3;
+                refreshRotateAxis();
+            }
+            */
+
+
+            //旋转轴
+            function initRotateAxis(rotateAxis) {
+
+                if (rotateAxis.IsEarthAxis) {
+
+                    camera.flyTo({
+                        destination: camera.position,
+                        orientation: {
+                            heading: Cesium.Math.toRadians(-23.0),
+                            pitch: Cesium.Math.toRadians(-90.0),
+                            roll: 0.0
+                        },
+                        duration: 0.0
+                    });
+
+                    camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
+                }
+                else {
+
+                    //计算目标轴
+                    let norStart = Cesium.Cartesian3.UNIT_Z;
+                    let norEnd = new Cesium.Cartesian3(rotateAxis.AxisX, rotateAxis.AxisY, rotateAxis.AxisZ);
+                    if (Cesium.Cartesian2.magnitude(norEnd) == 0) {
+                        camera.constrainedAxis = camera.up;
+                        return;
+                    }
+                    // let norEnd = Cesium.Cartesian3.normalize(new Cesium.Cartesian3(rx, ry, rz));
+                    let crossAxis = Cesium.Cartesian3.cross(norEnd, norStart, new Cesium.Cartesian3());
+                    if (crossAxis.equals(Cesium.Cartesian3.ZERO)) {
+                        camera.constrainedAxis = camera.up;
+                        return;
+                    }
+                    let dotValue = Cesium.Cartesian3.dot(norEnd, norStart);
+                    let angle = Cesium.Math.acosClamped(dotValue);
+                    let rotateQuaternion = Cesium.Quaternion.fromAxisAngle(crossAxis, angle);
+                    let matRotate3 = Cesium.Matrix3.fromQuaternion(rotateQuaternion, new Cesium.Matrix3());
+                    let p = camera.up;
+                    camera.constrainedAxis = Cesium.Matrix3.multiplyByVector(matRotate3, p, new Cesium.Cartesian3());
+
+                }
+
+                rotateSpeed = 360 * speedStep * rotateAxis.RotateCount / 60000;
+            }
+
+            var rotateReset = function () {
+     
+                /*  只复位轴
+                let pt = camera.position;
+                let length2 = Math.sqrt(pt.x * pt.x + pt.z * pt.z);
+                if (pt.x < 0)
+                    length2 = -length2;
+
+                var ellipsoid = viewer.scene.globe.ellipsoid;
+
+                var cartographicPosition = ellipsoid.cartesianToCartographic(new Cesium.Cartesian3(length2, pt.y, 0));
+
+                var camLat = Cesium.Math.toDegrees(cartographicPosition.latitude).toFixed(2);
+                var camLong = Cesium.Math.toDegrees(cartographicPosition.longitude).toFixed(2);
+
+                setCameraDestination(camLong, camLat, 0);
+                */
+
+                setCameraDestination(calLongOffset(getCurSceneModel().DefaultCamLong), 0, 0);
+
+                //rotateWay = 2;
+
+                //refreshRotateAxis();
+
+                resetCamInitialMatrix();
+            }
+
+
+            var calLongOffset = function (originLong) {
+                return Number(originLong) - (Number(getCurSceneModel().Layer.StartLong) + 180);
+            }
+
+            var calPickLongOffset = function (originLong) {
+                var lon = (Number(getCurSceneModel().Layer.StartLong) + 180) + Number(originLong);
+                if (lon > 180)
+                    lon = lon - 360;
+                else if (lon < -180)
+                    lon = lon + 360;
+                return lon.toFixed(2);
+            }
+
+
+            var measureContorlIndex = null;
+
+            //显示元素控制面板
+            var openMeasureContorl = function () {
+
+                measureContorlIndex = layer.open({
+                    type: 1,
+                    title: '量距',
+                    content: $('#divMeasure'),
+                    area: ['260px'],
+                    anim: 2,
+                    offset: 'l',
+                    shade: false,
+                    btnAlign: 'c',
+                    cancel: function () {
+                        layer.close(measureContorlIndex);
+                        stopMeasure();
+                    }
+                });
+            }
+    </script>
+
+    <script>
+
+        function createPoint(worldPosition, text) {
+            var point = viewer.entities.add({
+                position: worldPosition,
+                point: {
+                    color: Cesium.Color.WHITE,
+                    pixelSize: 5
+                        // ,heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+                },
+                label: {
+                    text: text,
+                    font: '14pt monospace',
+                    color: Cesium.Color.RED,
+                    backgroundColor: Cesium.Color.CORAL,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    outlineWidth: 2,
+                    //垂直位置
+                    heightReference: Cesium.HeightReference.NONE,
+                    verticalOrigin: Cesium.VerticalOrigin.TOP,
+                    pixelOffset: new Cesium.Cartesian2(50, 0)
+                }
+            });
+            return point;
+        }
+        var labeltems = [];
+        var allLines = []; //所有线的点集合
+        var allLineItems = []; //cesium 线对象(polyline)
+        var allLabelItems = []; //cesium 所有点对象
+
+        function drawShape(positionData) {
+            return viewer.entities.add({
+                polyline: {
+                    positions: positionData,
+                    //clampToGround: true,
+                    width: 3
+                }
+            });
+        }
+
+        var activeShapePoints = [];
+        var activeShape;
+        var floatingPoint;
+        var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+
+        var isMeasure = false;
+        handler.setInputAction(function (event) {
+            if (!isMeasure)
+                return;
+            // We use `viewer.scene.pickPosition` here instead of `viewer.camera.pickEllipsoid` so that
+            // we get the correct point when mousing over terrain.
+            //var earthPosition = viewer.scene.pickPosition(event.position);//地形上
+            var earthPosition = viewer.camera.pickEllipsoid(event.position);
+
+            // `earthPosition` will be undefined if our mouse is not over the globe.
+            if (Cesium.defined(earthPosition)) {
+                if (activeShapePoints.length === 0) {
+                    floatingPoint = createPoint(earthPosition, "");
+                    labeltems.push(floatingPoint);
+                    activeShapePoints.push(earthPosition);
+                    var dynamicPositions = new Cesium.CallbackProperty(function () {
+                        return activeShapePoints;
+                    }, false);
+                    activeShape = drawShape(dynamicPositions);
+
+                    labeltems.push(createPoint(earthPosition, '起点'));
+                }
+                else {
+                    let dis = getLineAllDis(activeShapePoints);
+                    labeltems.push(createPoint(earthPosition, dis.toString() + '公里'));
+                }
+
+                activeShapePoints.push(earthPosition);
+
+                if (activeShapePoints.length == 3)
+                    stopDrawMeasure();
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+        handler.setInputAction(function(event) {
+            if (Cesium.defined(floatingPoint)) {
+                var newPosition = viewer.camera.pickEllipsoid(event.endPosition);
+
+                if (Cesium.defined(newPosition)) {
+                    floatingPoint.position.setValue(newPosition);
+                    activeShapePoints.pop();
+                    activeShapePoints.push(newPosition);
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        // Redraw the shape so it's not dynamic and remove the dynamic shape.
+        function terminateShape() {
+            viewer.entities.remove(floatingPoint);
+            viewer.entities.remove(activeShape);
+            labeltems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+            floatingPoint = undefined;
+            activeShape = undefined;
+            activeShapePoints = [];
+            labeltems = [];
+        }
+
+        handler.setInputAction(function(event) {       
+            stopMeasure();
+        }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+        var startMeasure = function () {
+            isMeasure = true;
+        }
+
+        var stopMeasure = function () {
+            isMeasure = false;
+            clearDraw();
+        }
+
+        var stopDrawMeasure = function () {
+
+            //alert(activeShapePoints.length);
+
+            //activeShapePoints.pop();
+
+            //关闭当前绘制，创建新线段
+            allLines.push([].concat(activeShapePoints)); //保存副本
+
+            var ellipsoid = viewer.scene.globe.ellipsoid;
+
+            var cartographic = worldPosToLatAndLong(activeShapePoints[0]);
+
+            var fLat = Cesium.Math.toDegrees(cartographic.latitude);
+            var fLon = Cesium.Math.toDegrees(cartographic.longitude);
+
+            cartographic = worldPosToLatAndLong(activeShapePoints[2]);
+            var sLat = Cesium.Math.toDegrees(cartographic.latitude);
+            var sLon = Cesium.Math.toDegrees(cartographic.longitude);
+
+            var distance;
+
+            //清空当前绘制
+            clean();
+            //重新绘制所有历史记录
+            allLines.forEach(lb => {
+                allLineItems.push(drawShape(lb));
+                let sum = 0;
+                lb.forEach((pt, index) => {
+                    if (index == 0) {
+                        allLabelItems.push(createPoint(pt, "起点"));
+                    }
+                    else {
+                        sum += getLineDis(lb[index - 1], lb[index]);
+                        distance = sum.toFixed(2);
+                        allLabelItems.push(createPoint(pt, sum.toFixed(2) + "公里"));
+                    }
+                });
+            });
+
+            bkResponse.DrawMeasure(fLon, fLat, sLon, sLat, distance);
+        }
+
+        function clean() {
+            terminateShape();
+            allLineItems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+            allLabelItems.forEach(lb => {
+                viewer.entities.remove(lb);
+            });
+        }
+
+        function clearDraw() {
+            clean();
+            allLines = [];
+            allLabelItems = [];
+        }
+
+        //获取俩点的距离，返回公里单位值
+        function getLineDis(startPoint, endPoint) {
+            var x2 = (endPoint.x - startPoint.x) * (endPoint.x - startPoint.x)
+            var y2 = (endPoint.y - startPoint.y) * (endPoint.y - startPoint.y);
+            var dis = Math.sqrt(x2 + y2) / 1000;
+            return dis;
+        }
+
+        function getLineAllDis(activeShapePoints) {
+            let sum = 0.0;
+            for (let i = 1; i < activeShapePoints.length; i++)
+                sum += getLineDis(activeShapePoints[i], activeShapePoints[i - 1]);
+            return sum.toFixed(2);
+        }
+
+        function sum(arr) {
+            var s = 0;
+            for (var i = arr.length - 1; i >= 0; i--) {
+                s += Number(arr[i]);
+            }
+            return s;
+        }
+
+        var worldPosToLatAndLong = function (cartesian3) {
+            var ellipsoid = scene.globe.ellipsoid;
+            return ellipsoid.cartesianToCartographic(cartesian3);
+        }
+    </script>
+    <div id="divGetLongAndLat">
+        <form class="layui-form" action="">
+            <div class="layui-form-item">
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">经度</label>
+                    <div class="layui-input-block" style="width:100px">
+                        <input id="txtPickLong" type="text" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">纬度</label>
+                    <div class="layui-input-block" style="width:100px">
+                        <input id="txtPickLat" type="text" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                </div>
+        </form>
+    </div>
+
+    <div id="divMeasure">
+            <div class="layui-form-item" style="height:30px;">
+            </div>
+            <div class="layui-form-item" style="text-align: center;height:80px;">
+                <div>
+                    <button class="layui-btn layui-btn-normal" onclick="startMeasure()">测 量</button>
+                    <button class="layui-btn layui-btn-normal" onclick="clearDraw()">清 除</button>
+                </div>
+            </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/CesiumUnminified/Cesium.js"></script>
+    <style>
+        @import url(../Build/CesiumUnminified/Widgets/widgets.css);
+        /* @import url(../Build/CesiumUnminified/Widgets/Animation/lighter.css); */
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        #custom {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            height: 50px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+    </style>
+</head>
+
+<body >
+    <div id="credit"></div>
+
+    <div id="cesiumContainer" class="cesium-lighter"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            // geocoder: false,
+            // homeButton: false,
+            // sceneModePicker: false,
+            // baseLayerPicker: false,
+            // navigationHelpButton: false,
+            // infoBox: false,
+            // animation: false,
+            // timeline: false,
+            // fullscreenButton: false,
+            // vrButton: false,
+            // sceneMode: Cesium.SceneMode.SCENE3D,
+            // creditContainer: 'credit',
+            // selectionIndicator: false,
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+                    // url: 'land.jpg'
+            })
+        });
+        document.body.className = 'cesium-lighter';
+        // animation.applyThemeChanges();
+        viewer.animation.applyThemeChanges();
+
+        cycleTheme()
+    </script>
+
+</body>
+
+</html>
