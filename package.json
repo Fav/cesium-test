@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@types/cesium": "^1.47.3"
+  }
+}

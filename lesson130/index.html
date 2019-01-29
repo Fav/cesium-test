@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Hello World!</title>
+    <script src="../Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(../Build/Cesium/Widgets/widgets.css);
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .custom {
+            position:absolute;
+            top: 10px;
+            left: 10px;
+            opacity: 0.8;
+            z-index: 999;
+            background: gray;
+        }
+    </style>
+</head>
+
+<body >
+    <div id="credit"></div>
+    <div class="custom">
+        <label for="rx">rx:</label><span id="rx">aaa</span><br>
+        <label for="ry">ry:</label><span id="ry">aaa</span><br>
+        <label for="rz">rz:</label><span id="rz">aaa</span><br>
+    </div>
+    <div id="cesiumContainer"></div>
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: new Cesium.SingleTileImageryProvider({
+                url: '../img/worldimage.jpg'
+            }),
+        });
+
+        viewer.scene.screenSpaceCameraController.enableRotate = false;
+
+        let beforeRotate;
+        let afterRotate;
+        let rotatestart=false;
+        let defaultRotateAmount = Cesium.Math.PI / 360.0;
+
+        let handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+        handler.setInputAction(function(movement){
+            rotatestart = true;
+            beforeRotate = viewer.camera.inverseViewMatrix.clone();
+        },Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(function(movement){
+            rotatestart = false;
+            afterRotate = viewer.camera.viewMatrix.clone();
+            //旋转矩阵
+            let m = Cesium.Matrix4.multiply(afterRotate,beforeRotate, new Cesium.Matrix4());
+            //
+            let m3 = Cesium.Matrix4.getRotation(m, new Cesium.Matrix3());
+            let qu = Cesium.Quaternion.fromRotationMatrix(m3, new Cesium.Quaternion());
+            let hpr = Cesium.HeadingPitchRoll.fromQuaternion(qu, new Cesium.HeadingPitchRoll());
+            refreshLabel(
+                Cesium.Math.toDegrees(hpr.heading),
+                Cesium.Math.toDegrees(hpr.pitch),
+                Cesium.Math.toDegrees(hpr.roll)
+                );
+        },Cesium.ScreenSpaceEventType.LEFT_UP);
+
+        handler.setInputAction(function(movement) {
+            if (rotatestart) {
+                let pt2 = movement.startPosition;
+                let pt3 = movement.endPosition;
+                // camera.constrainedAxis = null;
+                // viewer.camera.rotateDown(defaultRotateAmount * (pt3.y - pt2.y));
+                viewer.camera.rotateLeft(defaultRotateAmount * (pt3.x - pt2.x));
+                // refreshRotateAxis();
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        function refreshLabel(rx =0,ry=0,rz=0){
+            document.getElementById("rx").innerText = rx;
+            document.getElementById("ry").innerText = ry; //横着转
+            document.getElementById("rz").innerText = rz; //竖着转
+        }
+
+        viewer.camera.flyTo({
+            destination : Cesium.Cartesian3.fromDegrees(0, 0, 50000000.0),
+            orientation: {
+                heading: 0,
+                pitch: Cesium.Math.toRadians(-90.0),
+                roll: 0.0
+            },
+            duration:0.0
+        });
+    </script>
+
+</body>
+
+</html>
